@@ -1,4 +1,4 @@
-One-to-One Chat API Documentation
+API Documentation
 
 Welcome to the API documentation for the One-to-One Chat application. This API facilitates communication between users via text messages and supports functionalities such as updating user profiles, sending messages, attaching media files, and retrieving chat history.
 Base URL
