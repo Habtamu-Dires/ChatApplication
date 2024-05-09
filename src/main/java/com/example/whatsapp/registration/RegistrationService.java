@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class RegistrationService {
 
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
+//    private final PasswordEncoder passwordEncoder;
 
 
     AuthenticationResponse register(RegisterRequest request){
@@ -22,7 +22,7 @@ public class RegistrationService {
                 .phoneNumber(request.phoneNumber())
                 .firstName(request.firstName())
                 .lastName(request.lastName())
-                .password(passwordEncoder.encode(request.password()))
+                .password(request.password())
                 .build();
 
         var savedUser = userService.addUser(user);

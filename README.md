@@ -6,7 +6,7 @@ Base URL
 The base URL for all API endpoints is: https://localhost:8080
 Authentication
 
-Authentication is required for certain endpoints. Please include your API key or token in the request headers as specified in each endpoint's documentation.
+Authentication (Basic Authentication) is required for all endpoints except registration endpoint. Please include username and password to access each endpoint. 
 Endpoints
 1. User Management
 1.1 Update User Profile
