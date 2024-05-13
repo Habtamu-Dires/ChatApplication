@@ -122,36 +122,26 @@ json
 
     Endpoint: POST /api/v1/attachments/uploadVideo
     Description: Upload a video file.
+
     Request Body Example:
+        video *
+        string($binary)
 
-    json
-
-{
-  "file": "string"
-}
-
-Success Response (200 OK) Example:
-
-json
-
-    "success"
+    Success Response (200 OK) Example:
+        json
+        "success"
 
 3.2 Upload Picture
 
     Endpoint: POST /api/v1/attachments/uploadPicture
     Description: Upload a picture file.
+    
     Request Body Example:
+    picture *
+    string($binary)
 
+    Success Response (200 OK) Example:
     json
-
-{
-  "file": "string"
-}
-
-Success Response (200 OK) Example:
-
-json
-
     "success"
 
 4. Chat Responses

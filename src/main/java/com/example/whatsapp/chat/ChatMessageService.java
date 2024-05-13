@@ -40,16 +40,14 @@ public class ChatMessageService {
 
     // receive message
     @KafkaListener(topics = "whatsapp-topic", groupId = "myGroup")
-    public void receiveMessage(ChatNotification chatNotification){
+    public void receiveMessage(ChatNotification chatNotification) {
+
+        log.info(String.format("Consuming the message from whatsapp-topic: %s", chatNotification));
       User user =  userService
-              .findUserById(Long.parseLong(chatNotification.getRecipient()));
+              .findUserByUsername(chatNotification.getRecipient());
       if(user != null){
-          String username = SecurityContextHolder
-                  .getContext()
-                  .getAuthentication()
-                  .getName();
-          if (username != null && username.equals(user.getUsername())) {
-              log.info(String.format("Consuming the message from hab-topic: %s",
+
+              log.info(String.format("Consuming the message from whatsapp-topic: %s",
                       chatNotification.getText())
               );
               //save message
@@ -67,14 +65,13 @@ public class ChatMessageService {
                               .attachmentPath(savedMsg.getAttachmentPath())
                               .build()
               );
-          }
       }
     }
 
     public ChatMessage save(ChatNotification chatNotification) {
 
-        User sender = userService.findUserById(Long.parseLong(chatNotification.getSender()));
-        User recipient = userService.findUserById(Long.parseLong(chatNotification.getRecipient()));
+        User sender = userService.findUserByUsername(chatNotification.getSender());
+        User recipient = userService.findUserByUsername(chatNotification.getRecipient());
 
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(sender)
