@@ -1,5 +1,6 @@
 package com.example.whatsapp.registration;
 
+import com.example.whatsapp.api_response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,10 +16,17 @@ public class RegistrationController {
     private final RegistrationService authenticationService;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthenticationResponse> register(
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> register(
             @RequestBody RegisterRequest request
     ) {
-        return ResponseEntity.ok(authenticationService.register(request));
+        AuthenticationResponse res
+                = authenticationService.register(request);
+        return ResponseEntity.ok(new ApiResponse<>(
+                         true,
+                         res,
+                         "user successfully registered"
+                 )
+         );
     }
 
 }

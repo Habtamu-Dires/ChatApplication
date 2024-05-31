@@ -11,7 +11,7 @@ public class UserMapper {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .username(user.getUsername())
-                .password(user.getPassword())
+                .phoneNumber(user.getPhoneNumber())
                 .build();
     }
 
@@ -27,7 +27,7 @@ public class UserMapper {
                 .firstName(userDTO.firstName())
                 .lastName(userDTO.lastName())
                 .username(userDTO.username())
-                .password(userDTO.password())
+                .phoneNumber(userDTO.phoneNumber())
                 .build();
     }
 }

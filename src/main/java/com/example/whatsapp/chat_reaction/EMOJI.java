@@ -1,4 +1,4 @@
-package com.example.whatsapp.chat_response;
+package com.example.whatsapp.chat_reaction;
 
 public enum EMOJI {
    THUMBUP, LOVE, CRYING, SURPRISED

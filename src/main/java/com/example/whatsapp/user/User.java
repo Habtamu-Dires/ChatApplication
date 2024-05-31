@@ -1,8 +1,17 @@
 package com.example.whatsapp.user;
 
 
+import com.example.whatsapp.chat_reaction.ChatReaction;
+import com.example.whatsapp.groupchat.GroupChatRoom;
+import com.example.whatsapp.contact.Contact;
+import com.example.whatsapp.user_contact.UserContact;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+
+import java.util.List;
 
 
 @Setter
@@ -23,9 +32,12 @@ public class User {
     @GeneratedValue(strategy = GenerationType.SEQUENCE,
     generator = "user_sequence")
     private Long id;
+    @NotBlank
     @Column(unique = true)
     private String username;
+    @NotBlank
     @Column(unique = true)
+    @Size(min = 9, max = 20)
     private String phoneNumber;
     private String firstName;
     private String lastName;
@@ -33,4 +45,19 @@ public class User {
     private String about;
     private String lastSeen;
 
+    @OneToMany(mappedBy = "owner")
+    private List<GroupChatRoom> groupChatRoomOwned;
+
+    @ManyToMany(mappedBy = "users")
+    private List<GroupChatRoom> groupChatRoomList;
+
+    @OneToMany(mappedBy = "user")
+    private List<UserContact> userContactList;
+
+    @OneToOne(mappedBy = "owner", cascade = {CascadeType.PERSIST,CascadeType.REMOVE})
+    private Contact contactBook;
+
+    @OneToMany(mappedBy = "user")
+    private List<ChatReaction> chatReactionList;
+    
 }

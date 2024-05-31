@@ -1,5 +1,6 @@
 package com.example.whatsapp.chatroom;
 
+import com.example.whatsapp.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +26,11 @@ public class ChatRoom {
             generator = "chatRoom_sequence"
     )
     private Long id;
+    @ManyToOne
+    @JoinColumn(name = "sender_id")
+    private User sender;
+    @ManyToOne
+    @JoinColumn(name = "recipient_id")
+    private User recipient;
     private String chatId;
-    private String senderId;
-    private String recipientId;
 }

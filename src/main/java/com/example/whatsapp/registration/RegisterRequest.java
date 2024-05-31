@@ -5,11 +5,11 @@ import lombok.Builder;
 
 @Builder
 public record RegisterRequest(
-         String phoneNumber,
          String firstName,
          String lastName,
          String username,
-         String password
+         String password,
+         String phoneNumber
 ) {
 
 }

@@ -1,5 +1,7 @@
 package com.example.whatsapp.chat;
 
+import com.example.whatsapp.api_response.ApiResponse;
+import com.example.whatsapp.exception.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,43 +28,129 @@ public class AttachmentController {
     @Value("${attachment.size-limit}")
     private long attachmentSizeLimit;
 
-    @PostMapping(value = "/upload-picture",  consumes = {"multipart/form-data"})
-    public ResponseEntity<String> uploadPicture(@RequestPart("picture") MultipartFile picture) {
-        if (picture.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please select a picture");
+    @PostMapping(value = "/upload-file", consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<String>> uploadFile(@RequestPart("file") MultipartFile file){
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false,"", "Please Select a file")
+            );
+        }
+        String fileType;
+        fileType = file.getContentType();
+        System.out.println("File type " + fileType);
+        if(fileType == null){
+            throw new InvalidRequestException("Could not determine file type");
         }
 
+        if(fileType.startsWith("image/")){
+            return uploadPicture(file);
+        } else if(fileType.startsWith("video/")){
+            return uploadVideo(file);
+        } else{
+            throw new InvalidRequestException("Unable to determine the file type");
+        }
+
+    }
+
+//    @PostMapping(value = "/upload-picture",  consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<String>> uploadPicture(MultipartFile picture) {
+
         if (picture.getSize() > attachmentSizeLimit) {
-            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("File size exceeds the limit");
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiResponse<>(
+                    false, "","Picture size exceeds the limit"
+                    )
+            );
+        }
+        //check if the path exists
+        if(!Files.exists(Paths.get(pictureDirectory))){
+            //create the directory if it doesn't exist
+            try {
+                Files.createDirectories(Paths.get(pictureDirectory));
+
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                        new ApiResponse<>(false, "",
+                                "Unable to create the directory " + e.getMessage())
+                );
+            }
         }
 
         try {
             Path filePath = Paths.get(pictureDirectory, Objects.requireNonNull(picture.getOriginalFilename()));
             Files.copy(picture.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            String fileUrl = "/picture/" + picture.getOriginalFilename(); // Construct URL for the uploaded picture
-            return ResponseEntity.ok("Picture uploaded successfully. File URL: " + fileUrl);
+            String s = Files.probeContentType(filePath);
+            System.out.println("The file type " + s);
+            return ResponseEntity.ok(new ApiResponse<>(true,
+                    filePath.toString(),
+                    "Picture uploaded successfully. "));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload picture");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(
+                    false, "", "Failed to upload picture")
+            );
         }
     }
 
-    @PostMapping(value = "/upload-video", consumes = {"multipart/form-data"})
-    public ResponseEntity<String> uploadVideo(@RequestPart("video") MultipartFile video) {
-        if (video.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please select a video");
-        }
+    //@PostMapping(value = "/upload-video", consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<String>> uploadVideo(MultipartFile video) {
 
         if (video.getSize() > attachmentSizeLimit) {
-            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("Video size exceeds the limit");
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiResponse<>(
+                            false, "","Video size exceeds the limit"
+                    )
+            );
         }
-        System.out.println("File size " + video.getSize());
+
+        //check if the path exists
+        if(!Files.exists(Paths.get(videoDirectory))){
+            //create the directory if it doesn't exist
+            try {
+                Files.createDirectories(Paths.get(videoDirectory));
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                        new ApiResponse<>(false, "",
+                                "Unable to create the directory " + e.getMessage())
+                );
+            }
+        }
         try {
             Path filePath = Paths.get(videoDirectory, Objects.requireNonNull(video.getOriginalFilename()));
             Files.copy(video.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            String fileUrl = "/video/" + video.getOriginalFilename(); // Construct URL for the uploaded video
-            return ResponseEntity.ok("Video uploaded successfully. File URL: " + fileUrl);
+            return ResponseEntity.ok(new ApiResponse<>(true,
+                    filePath.toString(),
+                    "Video uploaded successfully. "));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload video");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(
+                    false, "", "Failed to upload the video")
+            );
         }
     }
+
+    @DeleteMapping("/delete-file")
+    public ResponseEntity<ApiResponse<String>> deleteFile(
+            @RequestParam("file-path") String filePath){
+
+        Path path = Paths.get(filePath);
+
+        if(!Files.exists(path)){
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            Files.delete(path);
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true,
+                    "",
+                    "File Deleted Successfully"
+            ));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false,
+                            "",
+                            "Failed to delete the file " + e.getMessage()));
+        }
+
+    }
 }
+
+
+

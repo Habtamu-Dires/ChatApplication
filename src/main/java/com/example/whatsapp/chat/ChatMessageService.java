@@ -1,102 +1,96 @@
 package com.example.whatsapp.chat;
 
 
+import com.example.whatsapp.chatroom.ChatRoom;
 import com.example.whatsapp.chatroom.ChatRoomService;
+import com.example.whatsapp.exception.ResourceNotFoundException;
+import com.example.whatsapp.groupchat.GroupChatController;
+import com.example.whatsapp.groupchat.GroupChatRoom;
+import com.example.whatsapp.groupchat.GroupChatRoomRepository;
+import com.example.whatsapp.groupchat.GroupChatRoomService;
+import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ChatMessageService {
 
-    private final ChatMessageRepository repository;
+    private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomService chatRoomService;
     private final UserService userService;
-    private final KafkaTemplate<String, ChatNotification> kafkaTemplate;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final KafkaProducer kafkaProducer;
+    private final GroupChatRoomRepository groupChatRoomRepository;
+
+    //get chatMessage by chatId
+    public ChatMessage findChatMessageById(Long chatMessageId){
+      return chatMessageRepository.findByChatMessageId(chatMessageId)
+              .orElseThrow(()-> new ResourceNotFoundException(
+                      "Chat message with id " + chatMessageId + " not found")
+              );
+    }
 
     //send message
     public void sendMessage(ChatNotification chatNotification){
-        Message<ChatNotification> message = MessageBuilder
-                .withPayload(chatNotification)
-                .setHeader(KafkaHeaders.TOPIC, "whatsapp-topic")
-                .build();
-        kafkaTemplate.send(message);
+        userService.findUserByUsername(chatNotification.sender());
+        userService.findUserByUsername(chatNotification.recipient());
+        kafkaProducer.sendMessage(chatNotification);
     }
-
-    // receive message
-    @KafkaListener(topics = "whatsapp-topic", groupId = "myGroup")
-    public void receiveMessage(ChatNotification chatNotification) {
-
-        log.info(String.format("Consuming the message from whatsapp-topic: %s", chatNotification));
-      User user =  userService
-              .findUserByUsername(chatNotification.getRecipient());
-      if(user != null){
-
-              log.info(String.format("Consuming the message from whatsapp-topic: %s",
-                      chatNotification.getText())
-              );
-              //save message
-             ChatMessage savedMsg = save(chatNotification);
-
-              //send message notification to user
-              messagingTemplate.convertAndSendToUser(
-                      chatNotification.getRecipient(),
-                      "/my-messages",
-                      ChatNotification.builder()
-                              .sender(savedMsg.getSender().getUsername())
-                              .recipient(savedMsg.getRecipient().getUsername())
-                              .text(savedMsg.getText())
-                              .attachmentType(savedMsg.getAttachmentType())
-                              .attachmentPath(savedMsg.getAttachmentPath())
-                              .build()
-              );
-      }
-    }
-
+    //save chat message
     public ChatMessage save(ChatNotification chatNotification) {
 
-        User sender = userService.findUserByUsername(chatNotification.getSender());
-        User recipient = userService.findUserByUsername(chatNotification.getRecipient());
+        User sender = userService.findUserByUsername(chatNotification.sender());
+        User recipient = userService.findUserByUsername(chatNotification.recipient());
 
         ChatMessage chatMessage = ChatMessage.builder()
                 .sender(sender)
                 .recipient(recipient)
-                .text(chatNotification.getText())
-                .attachmentType(chatNotification.getAttachmentType())
-                .attachmentPath(chatNotification.getAttachmentPath())
+                .text(chatNotification.text())
+                .attachmentType(chatNotification.attachmentType())
+                .attachmentPath(chatNotification.attachmentPath())
+                .type(chatNotification.type())
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        var chatId = chatRoomService
-                .getChatRoomId(chatMessage.getSender().getId().toString(),
-                        chatMessage.getRecipient().getId().toString(),
+        var chatRoom = chatRoomService
+                .getChatRoom(chatMessage.getSender().getId(),
+                        chatMessage.getRecipient().getId(),
                         true
                 )
-                .orElseThrow(); // You can create your own dedicated exception
-        chatMessage.setChatId(chatId);
-        repository.save(chatMessage);
+                .orElseThrow(RuntimeException::new);
+
+
+        chatMessage.setChatRoom(chatRoom);
+        chatMessageRepository.save(chatMessage);
         return chatMessage;
     }
 
-    public List<ChatNotification> findChatMessages(String senderId, String recipientId) {
-        var chatId = chatRoomService.getChatRoomId(senderId, recipientId, false);
-        List<ChatMessage> chatMessages = chatId.map(repository::findByChatId)
-                .orElse(new ArrayList<>());
+    public ChatMessage saveGroupMessage(ChatMessage chatMessage){
+        return chatMessageRepository.save(chatMessage);
+    }
+
+    public List<ChatNotification> findChatMessages(String senderUsername, String recipientUsername) {
+
+        User sender  = userService.findUserByUsername(senderUsername);
+        User recipient = userService.findUserByUsername(recipientUsername);
+
+        Long senderId = sender.getId();
+        Long recipientId = recipient.getId();
+
+        Optional<ChatRoom> chatRoom = chatRoomService.getChatRoom(
+                senderId, recipientId, false);
+        List<ChatMessage> chatMessages = chatRoom.map(cr ->
+                        chatMessageRepository.findByChatId(cr.getChatId())
+                )
+                .orElse(List.of());
 
         List<ChatNotification> chatNotificationList = new ArrayList<>();
         chatMessages.forEach(chatMessage -> {
@@ -107,12 +101,30 @@ public class ChatMessageService {
                             .text(chatMessage.getText())
                             .attachmentType(chatMessage.getAttachmentType())
                             .attachmentPath(chatMessage.getAttachmentPath())
+                            .type(chatMessage.getType())
                             .build()
             );
         });
 
         return chatNotificationList;
+
     }
 
+    public List<ChatMessage> findChatMessagesByGroupName(String groupName) {
+        GroupChatRoom groupChatRoom = groupChatRoomRepository
+                .findByGroupName(groupName)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Message with " + groupName + " not found"
+                ));
 
+        Long groupId = groupChatRoom.getId();
+
+        return chatMessageRepository.findByGroupId(groupId);
+
+    }
+
+    //delete chat message by
+    public void deleteChatMessage(ChatMessage chatMessage){
+        chatMessageRepository.delete(chatMessage);
+    }
 }

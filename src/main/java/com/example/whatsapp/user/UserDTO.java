@@ -6,8 +6,7 @@ import java.util.List;
 
 @Builder
 public record UserDTO(
-                        String phoneNumber,
                         String firstName,
                         String lastName,
                         String username,
-                        String password) {}
+                        String phoneNumber) {}

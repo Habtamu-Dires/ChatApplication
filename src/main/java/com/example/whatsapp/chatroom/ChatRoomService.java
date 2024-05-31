@@ -1,9 +1,11 @@
 package com.example.whatsapp.chatroom;
 
+import com.example.whatsapp.user.User;
+import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.common.quota.ClientQuotaAlteration;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Optional;
 
 @Service
@@ -11,19 +13,19 @@ import java.util.Optional;
 public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
+    private final UserService userService;
 
-    public Optional<String> getChatRoomId(
-            String senderId,
-            String recipientId,
+    public Optional<ChatRoom> getChatRoom(
+            Long sender,
+            Long recipient,
             boolean createNewRoomIfNotExists
     ) {
         return chatRoomRepository
-                .findBySenderIdAndRecipientId(senderId, recipientId)
-                .map(ChatRoom::getChatId)
+                .findBySenderAndRecipient(sender, recipient)
                 .or(() -> {
                     if(createNewRoomIfNotExists) {
-                        var chatId = createChatId(senderId, recipientId);
-                        return Optional.of(chatId);
+                        var chatRoom = createChatId(sender, recipient);
+                        return Optional.of(chatRoom);
                     }
 
                     return  Optional.empty();
@@ -31,26 +33,29 @@ public class ChatRoomService {
     }
 
     @Transactional
-    private String createChatId(String senderId, String recipientId) {
-        var chatId = String.format("%s_%s", senderId, recipientId);
+    private ChatRoom createChatId(Long senderId, Long recipientId) {
+        var chatId = String.format("%d_%d", senderId, recipientId);
+        User sender = userService.findUserById(senderId);
+        User recipient = userService.findUserById(recipientId);
 
         ChatRoom senderRecipient = ChatRoom
                 .builder()
                 .chatId(chatId)
-                .senderId(senderId)
-                .recipientId(recipientId)
+                .sender(sender)
+                .recipient(recipient)
                 .build();
 
         ChatRoom recipientSender = ChatRoom
                 .builder()
                 .chatId(chatId)
-                .senderId(recipientId)
-                .recipientId(senderId)
+                .sender(recipient)
+                .recipient(sender)
                 .build();
 
         chatRoomRepository.save(senderRecipient);
         chatRoomRepository.save(recipientSender);
 
-        return chatId;
+        return senderRecipient;
+
     }
 }
