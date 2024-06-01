@@ -2,9 +2,10 @@ package com.example.whatsapp.user;
 
 
 import com.example.whatsapp.api_response.ApiResponse;
-import com.example.whatsapp.exception.ResourceNotFoundException;
+import com.example.whatsapp.user.dtos.ProfileUpdateDTO;
+import com.example.whatsapp.user.dtos.UserAndContactDto;
+import com.example.whatsapp.user.dtos.UserDTO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,11 +29,11 @@ public class UserController {
 
     //update profile
     @PutMapping("/profile-update")
-    public ResponseEntity<ApiResponse<UserDTO>> updateProfile(
-            @RequestBody UserDTO userDTO){
-        UserDTO userDto = userService.updateUser(userDTO);
+    public ResponseEntity<ApiResponse<ProfileUpdateDTO>> updateProfile(
+            @RequestBody ProfileUpdateDTO dto){
+        ProfileUpdateDTO updateDTO = userService.updateUser(dto);
         return ResponseEntity.ok(new ApiResponse<>(
-                true,userDto,"user profile-updated"));
+                true,updateDTO,"user profile-updated"));
     }
 
     // find chat group names of a user
@@ -60,7 +61,7 @@ public class UserController {
             @RequestBody UserAndContactDto addToContact
     ) {
       var userDto = userService
-              .addToContact(addToContact.username,addToContact.contactName);
+              .addToContact(addToContact.username(),addToContact.contactName());
         return ResponseEntity.ok(new ApiResponse<>(
                 true, userDto, "contact successful added"));
     }
@@ -71,7 +72,7 @@ public class UserController {
         @RequestBody UserAndContactDto userAndContactDto
     ) {
             userService.removeContact(
-                    userAndContactDto.username,userAndContactDto.contactName
+                    userAndContactDto.username(),userAndContactDto.contactName()
             );
 
             return ResponseEntity.ok(new ApiResponse<>(
@@ -80,8 +81,7 @@ public class UserController {
                     "Contact successfully Removed"
             ));
     }
-    // userAndContactDto record
-    public record UserAndContactDto(String username, String contactName){};
+
 }
 
 

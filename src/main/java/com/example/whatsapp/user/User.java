@@ -2,11 +2,10 @@ package com.example.whatsapp.user;
 
 
 import com.example.whatsapp.chat_reaction.ChatReaction;
+import com.example.whatsapp.contacts.Contacts;
 import com.example.whatsapp.groupchat.GroupChatRoom;
-import com.example.whatsapp.contact.Contact;
 import com.example.whatsapp.user_contact.UserContact;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -55,7 +54,7 @@ public class User {
     private List<UserContact> userContactList;
 
     @OneToOne(mappedBy = "owner", cascade = {CascadeType.PERSIST,CascadeType.REMOVE})
-    private Contact contactBook;
+    private Contacts contactsBook;
 
     @OneToMany(mappedBy = "user")
     private List<ChatReaction> chatReactionList;

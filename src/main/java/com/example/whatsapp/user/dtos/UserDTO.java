@@ -1,8 +1,6 @@
-package com.example.whatsapp.user;
+package com.example.whatsapp.user.dtos;
 
 import lombok.Builder;
-
-import java.util.List;
 
 @Builder
 public record UserDTO(

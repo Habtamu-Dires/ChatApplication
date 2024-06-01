@@ -1,6 +1,6 @@
 package com.example.whatsapp.chat_reaction;
 
-import com.example.whatsapp.chat.ChatMessage;
+import com.example.whatsapp.chat_message.ChatMessage;
 import com.example.whatsapp.user.User;
 import jakarta.persistence.*;
 import lombok.*;

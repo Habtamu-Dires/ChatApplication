@@ -1,13 +1,12 @@
-package com.example.whatsapp.chat;
+package com.example.whatsapp.chat_message;
 
 
+import com.example.whatsapp.chat_dto.ChatNotification;
 import com.example.whatsapp.chatroom.ChatRoom;
 import com.example.whatsapp.chatroom.ChatRoomService;
 import com.example.whatsapp.exception.ResourceNotFoundException;
-import com.example.whatsapp.groupchat.GroupChatController;
 import com.example.whatsapp.groupchat.GroupChatRoom;
 import com.example.whatsapp.groupchat.GroupChatRoomRepository;
-import com.example.whatsapp.groupchat.GroupChatRoomService;
 import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;

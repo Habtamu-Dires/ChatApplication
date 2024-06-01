@@ -1,4 +1,4 @@
-package com.example.whatsapp.contact;
+package com.example.whatsapp.contacts;
 
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user_contact.UserContact;
@@ -13,8 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "contact")
-public class Contact {
+@Table(name = "contacts")
+public class Contacts {
 
     @Id
     @SequenceGenerator(
@@ -30,7 +30,7 @@ public class Contact {
     @JoinColumn(name = "owner_id")
     private User owner;
 
-    @OneToMany(mappedBy = "contact", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "contacts", fetch = FetchType.EAGER)
     public List<UserContact> userContacts;
 
 }

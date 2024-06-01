@@ -1,7 +1,7 @@
 package com.example.whatsapp.chat_reaction;
 
-import com.example.whatsapp.chat.ChatMessage;
-import com.example.whatsapp.chat.ChatMessageService;
+import com.example.whatsapp.chat_message.ChatMessage;
+import com.example.whatsapp.chat_message.ChatMessageService;
 import com.example.whatsapp.chat_reaction.dtos.ChatReactionDTO;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;

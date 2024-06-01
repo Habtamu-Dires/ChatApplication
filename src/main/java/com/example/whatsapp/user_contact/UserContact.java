@@ -1,6 +1,6 @@
 package com.example.whatsapp.user_contact;
 
-import com.example.whatsapp.contact.Contact;
+import com.example.whatsapp.contacts.Contacts;
 import com.example.whatsapp.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,7 +25,7 @@ public class UserContact {
     @Id
     @ManyToOne
     @JoinColumn(name = "contact_id")
-    private Contact contact;
+    private Contacts contacts;
 
     private LocalDateTime createdAt;
 }

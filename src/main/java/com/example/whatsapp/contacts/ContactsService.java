@@ -1,4 +1,4 @@
-package com.example.whatsapp.contact;
+package com.example.whatsapp.contacts;
 
 import com.example.whatsapp.exception.ResourceNotFoundException;
 import com.example.whatsapp.user.User;
@@ -8,26 +8,26 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ContactService {
+public class ContactsService {
 
-    private final ContactRepository contactRepository;
+    private final ContactsRepository contactsRepository;
 
 
-    public Contact createNewContactContainer(User user){
-      return contactRepository.save(
-              Contact.builder()
+    public Contacts createNewContactContainer(User user){
+      return contactsRepository.save(
+              Contacts.builder()
                   .owner(user)
                   .build());
     }
-    public Contact getContactByOwner(User owner){
-       return contactRepository.findByOwner(owner.getId())
+    public Contacts getContactByOwner(User owner){
+       return contactsRepository.findByOwner(owner.getId())
        .orElseThrow(()->new ResourceNotFoundException(
                "Contact with owner name " + owner.getUsername() + " not found"
        ));
     }
 
     public void deleteContact(User owner){
-       Contact contact = getContactByOwner(owner);
-       contactRepository.delete(contact);
+       Contacts contacts = getContactByOwner(owner);
+       contactsRepository.delete(contacts);
     }
 }

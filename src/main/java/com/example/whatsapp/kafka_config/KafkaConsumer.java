@@ -1,11 +1,10 @@
 package com.example.whatsapp.kafka_config;
 
-import com.example.whatsapp.chat.ChatMessage;
-import com.example.whatsapp.chat.ChatMessageService;
-import com.example.whatsapp.chat.ChatNotification;
+import com.example.whatsapp.chat_message.ChatMessage;
+import com.example.whatsapp.chat_message.ChatMessageService;
+import com.example.whatsapp.chat_dto.ChatNotification;
 import com.example.whatsapp.groupchat.GroupChatRoom;
 import com.example.whatsapp.groupchat.GroupChatRoomService;
-import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,20 +1,20 @@
 package com.example.whatsapp.groupchat;
 
-import com.example.whatsapp.chat.ChatMessage;
-import com.example.whatsapp.chat.ChatMessageService;
-import com.example.whatsapp.chat.ChatNotification;
+import com.example.whatsapp.chat_message.ChatMessage;
+import com.example.whatsapp.chat_message.ChatMessageService;
+import com.example.whatsapp.chat_dto.ChatNotification;
 import com.example.whatsapp.exception.InvalidRequestException;
 import com.example.whatsapp.exception.ResourceNotFoundException;
 import com.example.whatsapp.groupchat.dtos.AddToGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupResponse;
+import com.example.whatsapp.groupchat.dtos.UpdateGroupNameDTO;
 import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
-import com.example.whatsapp.user.UserDTO;
+import com.example.whatsapp.user.dtos.UserDTO;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,12 +31,11 @@ public class GroupChatRoomService {
     private final UserService userService;
     private final ChatMessageService chatMessageService;
 
-
     public GroupChatRoom findByGroupName(String groupName){
       return groupChatRoomRepository.findByGroupName(groupName)
-                .orElseThrow(()-> new ResourceNotFoundException(
-                        "Group with group name " + groupName + " not found")
-                );
+            .orElseThrow(()-> new ResourceNotFoundException(
+                    "Group with group name " + groupName + " not found")
+            );
     }
 
     public CreateGroupResponse createGroup(CreateGroupDTO createGroupDTO){
@@ -88,8 +87,8 @@ public class GroupChatRoomService {
     
 
     public void sendMessage(ChatNotification chatNotification) {
-        User sender = userService.findUserByUsername(chatNotification.sender());
-        GroupChatRoom groupChatRoom = findByGroupName(chatNotification.groupName());
+        userService.findUserByUsername(chatNotification.sender()); //check sender
+        findByGroupName(chatNotification.groupName()); // check group
         if(!chatNotification.type().equals("group")) {
             throw new InvalidRequestException(
                     "Message type is not allowed"
@@ -162,7 +161,10 @@ public class GroupChatRoomService {
     }
     // get group members
     public List<UserDTO> getMembersOfGroup(String groupName) {
-        List<User> userList = groupChatRoomRepository.findUsersByGroupName(groupName);
+        GroupChatRoom groupChatRoom = findByGroupName(groupName); //check if the group exists
+        List<User> userList = groupChatRoomRepository
+                .findUsersByGroupName(groupChatRoom.getGroupName());
+
         List<UserDTO> userDTOList = new ArrayList<>();
         userList.forEach(user -> {
             userDTOList.add(
@@ -175,5 +177,19 @@ public class GroupChatRoomService {
             );
         });
         return userDTOList;
+    }
+
+    public void updateGroupName(UpdateGroupNameDTO dto) {
+        GroupChatRoom groupChatRoom = findByGroupName(dto.oldGroupName());
+        User user = userService.findUserByUsername(dto.ownerName());
+        if(!groupChatRoom.getOwner().getId().equals(user.getId())){
+            throw new InvalidRequestException(
+                    "The user " + dto.ownerName()
+                     + " is not permitted to change group name"
+            );
+        }
+
+        groupChatRoom.setGroupName(dto.newGroupName());
+        groupChatRoomRepository.save(groupChatRoom);
     }
 }

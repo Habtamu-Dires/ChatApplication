@@ -1,6 +1,9 @@
 package com.example.whatsapp.user;
 
 
+import com.example.whatsapp.user.dtos.ProfileUpdateDTO;
+import com.example.whatsapp.user.dtos.UserDTO;
+
 import java.util.List;
 
 public class UserMapper {
@@ -28,6 +31,15 @@ public class UserMapper {
                 .lastName(userDTO.lastName())
                 .username(userDTO.username())
                 .phoneNumber(userDTO.phoneNumber())
+                .build();
+    }
+
+    public static ProfileUpdateDTO userToProfileUpdateDTO(User user) {
+        return ProfileUpdateDTO.builder()
+                .newUsername(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phoneNumber(user.getPhoneNumber())
                 .build();
     }
 }

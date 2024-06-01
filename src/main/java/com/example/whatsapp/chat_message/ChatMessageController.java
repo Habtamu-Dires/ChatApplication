@@ -1,6 +1,7 @@
-package com.example.whatsapp.chat;
+package com.example.whatsapp.chat_message;
 
 import com.example.whatsapp.api_response.ApiResponse;
+import com.example.whatsapp.chat_dto.ChatNotification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/chat")
-public class ChatController {
+public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
     @PostMapping("/send")

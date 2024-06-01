@@ -1,6 +1,5 @@
-package com.example.whatsapp.chat;
+package com.example.whatsapp.chat_message;
 
-import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 

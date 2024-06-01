@@ -1,4 +1,4 @@
-package com.example.whatsapp.chat;
+package com.example.whatsapp.attachment_controller;
 
 import com.example.whatsapp.api_response.ApiResponse;
 import com.example.whatsapp.exception.InvalidRequestException;
@@ -52,7 +52,6 @@ public class AttachmentController {
 
     }
 
-//    @PostMapping(value = "/upload-picture",  consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<String>> uploadPicture(MultipartFile picture) {
 
         if (picture.getSize() > attachmentSizeLimit) {
@@ -90,7 +89,6 @@ public class AttachmentController {
         }
     }
 
-    //@PostMapping(value = "/upload-video", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<String>> uploadVideo(MultipartFile video) {
 
         if (video.getSize() > attachmentSizeLimit) {

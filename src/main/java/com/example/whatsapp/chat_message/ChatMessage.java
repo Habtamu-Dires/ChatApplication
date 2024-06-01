@@ -1,4 +1,4 @@
-package com.example.whatsapp.chat;
+package com.example.whatsapp.chat_message;
 
 import com.example.whatsapp.chat_reaction.ChatReaction;
 import com.example.whatsapp.chatroom.ChatRoom;

@@ -1,9 +1,12 @@
 package com.example.whatsapp.user;
 
-import com.example.whatsapp.contact.Contact;
-import com.example.whatsapp.contact.ContactService;
+import com.example.whatsapp.contacts.Contacts;
+import com.example.whatsapp.contacts.ContactsService;
+import com.example.whatsapp.exception.InvalidRequestException;
 import com.example.whatsapp.exception.ResourceNotFoundException;
 import com.example.whatsapp.groupchat.GroupChatRoom;
+import com.example.whatsapp.user.dtos.ProfileUpdateDTO;
+import com.example.whatsapp.user.dtos.UserDTO;
 import com.example.whatsapp.user_contact.UserContact;
 import com.example.whatsapp.user_contact.UserContactService;
 import jakarta.transaction.Transactional;
@@ -19,14 +22,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserContactService userContactService;
-    private final ContactService contactService;
+    private final ContactsService contactsService;
 
 
     // save new user
     @Transactional
     public User addUser(User user){
        User savedUser = userRepository.save(user);
-       contactService.createNewContactContainer(savedUser);
+       contactsService.createNewContactContainer(savedUser);
        return savedUser;
     }
 
@@ -56,15 +59,28 @@ public class UserService {
 
 
 
-    // update a user
-    public UserDTO updateUser(UserDTO userDTO) {
-        User user = findUserByUsername(userDTO.username());
+    // update a user profile
+    public ProfileUpdateDTO updateUser(ProfileUpdateDTO dto) {
+        if(isUsernameExists(dto.newUsername())){
+            throw new InvalidRequestException("Username already taken");
+        }
+        User user = findUserByUsername(dto.oldUsername());
 
-        user.setFirstName(userDTO.firstName());
-        user.setLastName(userDTO.lastName());
-        user.setPhoneNumber(userDTO.phoneNumber());
+        if(!user.getPhoneNumber().equals(dto.phoneNumber()) &&
+                isPhoneNumberTaken(dto.phoneNumber())){
+            throw new InvalidRequestException("Phone number already taken");
+        }
 
-        return UserMapper.userToDTO(userRepository.save(user));
+        user.setUsername(dto.newUsername());
+        user.setFirstName(dto.firstName());
+        user.setLastName(dto.lastName());
+        user.setPhoneNumber(dto.phoneNumber());
+        // does password change requested
+        if(!dto.phoneNumber().isBlank()){
+            user.setPassword(dto.password());
+        }
+
+        return UserMapper.userToProfileUpdateDTO(userRepository.save(user));
 
     }
     // get user profile by username
@@ -88,10 +104,10 @@ public class UserService {
         User user = findUserByUsername(username);
 
         List<UserDTO> userDTOList = new ArrayList<>();
-        Contact contact = contactService.getContactByOwner(user);
+        Contacts contacts = contactsService.getContactByOwner(user);
 //      userContactService
 //       .getUserListsByContactId(contact.getId())
-        contact.userContacts
+        contacts.userContacts
         .stream()
         .map(UserContact::getUser)
         .forEach(u -> {

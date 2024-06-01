@@ -1,6 +1,6 @@
 package com.example.whatsapp.kafka_config;
 
-import com.example.whatsapp.chat.ChatNotification;
+import com.example.whatsapp.chat_dto.ChatNotification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;

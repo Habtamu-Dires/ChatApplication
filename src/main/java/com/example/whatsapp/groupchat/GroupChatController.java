@@ -1,12 +1,13 @@
 package com.example.whatsapp.groupchat;
 
 import com.example.whatsapp.api_response.ApiResponse;
-import com.example.whatsapp.chat.ChatNotification;
+import com.example.whatsapp.chat_dto.ChatNotification;
 import com.example.whatsapp.exception.InvalidRequestException;
 import com.example.whatsapp.groupchat.dtos.AddToGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupResponse;
-import com.example.whatsapp.user.UserDTO;
+import com.example.whatsapp.groupchat.dtos.UpdateGroupNameDTO;
+import com.example.whatsapp.user.dtos.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -61,7 +62,7 @@ public class GroupChatController {
                 "group successfully created"));
     }
 
-    // add to group
+    // add a user to group
     @PostMapping("add-to-group")
     public ResponseEntity<ApiResponse<String>> addUserToGroupChat(
             @RequestBody AddToGroupDTO addToGroupDTO)
@@ -70,6 +71,19 @@ public class GroupChatController {
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 addToGroupDTO.username() + " added to " + addToGroupDTO.groupName(),
+                "success")
+        );
+    }
+
+    //update groups name
+    @PutMapping("change-name")
+    public ResponseEntity<ApiResponse<String>> changeGroupName(
+            @RequestBody UpdateGroupNameDTO dto
+            ){
+        groupChatRoomService.updateGroupName(dto);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                dto.ownerName() +  " change group name to " + dto.newGroupName(),
                 "success")
         );
     }
@@ -87,6 +101,8 @@ public class GroupChatController {
                 "Members of a group found"
         ));
     }
+
+
 
     //delete a group
     @DeleteMapping("delete-group/{groupName}/{ownerName}")
