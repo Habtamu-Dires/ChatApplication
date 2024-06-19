@@ -5,6 +5,8 @@ import com.example.whatsapp.chat_dto.ChatNotification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.Files;
@@ -17,11 +19,14 @@ import java.util.List;
 public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
+
     @PostMapping("/send")
     public ResponseEntity<ApiResponse<String>> sendMessage(
-            @RequestBody ChatNotification chatNotification)
+            @RequestBody ChatNotification chatNotification
+           //@Payload ChatNotification chatNotification
+    )
     {
-        String filePath = chatNotification.attachmentPath();
+        String filePath = chatNotification.fileUrl();
         if(filePath != null  && !filePath.isBlank()){
            if(!Files.exists(Paths.get(filePath))) {
                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -34,7 +39,7 @@ public class ChatMessageController {
         }
         chatMessageService.sendMessage(chatNotification);
         return ResponseEntity.ok(new ApiResponse<>(
-                true,"message sent","success"));
+                true,"message sent","message send successfully"));
     }
 
     @GetMapping("/messages/{sender}/{recipient}")

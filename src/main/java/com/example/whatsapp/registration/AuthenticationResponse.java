@@ -1,3 +1,6 @@
 package com.example.whatsapp.registration;
 
-public record AuthenticationResponse( String username) { }
+import lombok.Builder;
+
+@Builder
+public record AuthenticationResponse( String username, String password) { }

@@ -15,6 +15,17 @@ public class RegistrationController {
 
     private final RegistrationService authenticationService;
 
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> login(
+            @RequestBody LoginRequest request
+    ){
+     var res = authenticationService.authenticate(request);
+     return ResponseEntity.ok(
+             new ApiResponse<>(
+                     true,res,"success"
+             )
+     );
+    }
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthenticationResponse>> register(
             @RequestBody RegisterRequest request

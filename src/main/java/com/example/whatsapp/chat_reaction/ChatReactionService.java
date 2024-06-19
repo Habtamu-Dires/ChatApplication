@@ -3,13 +3,19 @@ package com.example.whatsapp.chat_reaction;
 import com.example.whatsapp.chat_message.ChatMessage;
 import com.example.whatsapp.chat_message.ChatMessageService;
 import com.example.whatsapp.chat_reaction.dtos.ChatReactionDTO;
+import com.example.whatsapp.chat_reaction.dtos.ChatReactionReqResDTO;
+import com.example.whatsapp.exception.ResourceNotFoundException;
+import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -18,9 +24,12 @@ public class ChatReactionService {
     private final ChatMessageService chatMessageService;
     private final ChatReactionRepository chatReactionRepository;
     private final UserService userService;
+    private final KafkaProducer kafkaProducer;
 
     // get chat reaction
-    public List<ChatReactionDTO> getChatReactions(Long chatMessageId) {
+    public List<ChatReactionDTO> getChatReactions(UUID chatMessageId) {
+        chatMessageService.findChatMessageById(chatMessageId);
+
         return chatReactionRepository.findByChatMessage(chatMessageId)
                 .stream()
                 .map(cr ->
@@ -35,42 +44,43 @@ public class ChatReactionService {
     }
 
     // add - remove chat reactions
-    public List<ChatReactionDTO> addRemoveChatReaction(
-            Long chatMessageId, String username,String emoji
+    public void addRemoveChatReaction(
+            ChatReactionReqResDTO dto
     ) {
+        chatMessageService.findChatMessageById(dto.getChatMessageId());
+        userService.findUserByUsername(dto.getUsername());
 
-        ChatReaction chatReaction = chatReactionRepository
-                .findByChatMessageAndUser(chatMessageId, username)
-                .orElse(null);
+        findByChatMessageAndUser(dto.getChatMessageId(), dto.getUsername())
+                .ifPresentOrElse(chatReaction -> {
+                    if(chatReaction.getEmoji().toString().equals(dto.getEmoji())){
+                        // status delete
+                        dto.setStatus("DELETE");
+                    } else {
+                        // status update
+                        dto.setStatus("UPDATE");
+                    }
+                } ,() -> {
+                    // status new
+                    dto.setStatus("ADD");
+                }
+        );
 
-        if(chatReaction == null){
-            //create one
-            User user = userService.findUserByUsername(username);
-            ChatMessage chatMessage = chatMessageService
-                    .findChatMessageById(chatMessageId);
+        kafkaProducer.sendMessage(dto);
+    }
 
-            chatReactionRepository.save(
-                ChatReaction.builder()
-                    .chatMessage(chatMessage)
-                    .user(user)
-                    .emoji(EMOJI.valueOf(emoji))
-                    .createdAt(LocalDateTime.now())
-                    .build()
-            );
+    //find by Message and User
+    public Optional<ChatReaction> findByChatMessageAndUser(UUID chatMessageId, String username){
+        return chatReactionRepository.findByChatMessageAndUser(chatMessageId,
+                username);
+    }
 
+    //save
+    public void save(ChatReaction chatReaction){
+        chatReactionRepository.save(chatReaction);
+    }
 
-        } else {
-            if(chatReaction.getEmoji().name().equals(emoji)) {
-                chatReactionRepository.delete(chatReaction);
-            } else {
-                chatReaction.setEmoji(EMOJI.valueOf(emoji));
-                chatReaction.setCreatedAt(LocalDateTime.now());
-                chatReactionRepository.save(chatReaction);
-            }
-
-        }
-
-        return getChatReactions(chatMessageId);
-
+    //delete
+    public void delete(ChatReaction chatReaction){
+        chatReactionRepository.delete(chatReaction);
     }
 }

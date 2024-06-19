@@ -6,12 +6,13 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 @Getter
 @Setter
 public class ChatReactionId implements Serializable {
 
-    private Long chatMessage;
+    private UUID chatMessage;
     private Long user;
 
     @Override

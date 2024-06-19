@@ -3,7 +3,7 @@ package com.example.whatsapp.chatroom;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.common.quota.ClientQuotaAlteration;
+//import org.apache.kafka.common.quota.ClientQuotaAlteration;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;

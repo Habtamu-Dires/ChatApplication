@@ -61,7 +61,8 @@ public class UserService {
 
     // update a user profile
     public ProfileUpdateDTO updateUser(ProfileUpdateDTO dto) {
-        if(isUsernameExists(dto.newUsername())){
+        if(!dto.newUsername().equals(dto.oldUsername())
+            && isUsernameExists(dto.newUsername())){
             throw new InvalidRequestException("Username already taken");
         }
         User user = findUserByUsername(dto.oldUsername());
@@ -76,7 +77,7 @@ public class UserService {
         user.setLastName(dto.lastName());
         user.setPhoneNumber(dto.phoneNumber());
         // does password change requested
-        if(!dto.phoneNumber().isBlank()){
+        if(dto.password() != null && !dto.password().isBlank() ){
             user.setPassword(dto.password());
         }
 
@@ -137,5 +138,15 @@ public class UserService {
         User user = findUserByUsername(username);
         User contactUser = findUserByUsername(contactUsername);
         userContactService.removeContact(user, contactUser);
+    }
+
+    public List<UserDTO> searchUsers(String username) {
+        List<User> userList = userRepository.searchUsers(username);
+
+        List<UserDTO> userDTOList = new ArrayList<>();
+        userList.forEach(user -> {
+          userDTOList.add(UserMapper.userToDTO(user));
+        });
+        return userDTOList;
     }
 }

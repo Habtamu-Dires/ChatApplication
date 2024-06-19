@@ -18,6 +18,16 @@ public class UserController {
 
     private final UserService userService;
 
+    //search users
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<UserDTO>>> searchUsers(
+            @RequestParam String username
+    ){
+       List<UserDTO> userDTOList =  userService.searchUsers(username);
+       return ResponseEntity.ok(new ApiResponse<>(
+                true,userDTOList,"user profile-updated"));
+    }
+
     //get a profile
     @GetMapping("/profile/{username}")
     public ResponseEntity<ApiResponse<UserDTO>> getAllUsers(
@@ -31,16 +41,20 @@ public class UserController {
     @PutMapping("/profile-update")
     public ResponseEntity<ApiResponse<ProfileUpdateDTO>> updateProfile(
             @RequestBody ProfileUpdateDTO dto){
-        ProfileUpdateDTO updateDTO = userService.updateUser(dto);
+        System.out.println(dto);
+        ProfileUpdateDTO userDTO = userService.updateUser(dto);
         return ResponseEntity.ok(new ApiResponse<>(
-                true,updateDTO,"user profile-updated"));
+                true,userDTO,"user profile-updated"));
     }
 
     // find chat group names of a user
     @GetMapping("/groups/{username}")
-    public List<String> findChatGroups(
+    public ResponseEntity<ApiResponse<List<String>>> findChatGroups(
             @PathVariable("username") String username){
-        return userService.findChatGroupNames(username);
+        var chatGroupNames = userService.findChatGroupNames(username);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, chatGroupNames, "contacts found")
+        );
     }
 
     // find contacts of a user

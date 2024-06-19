@@ -5,8 +5,9 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
 
     @Query("SELECT cm FROM ChatMessage cm WHERE cm.chatRoom.chatId=:chatId")
     List<ChatMessage> findByChatId(String chatId);
@@ -15,5 +16,5 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findByGroupId(Long groupId);
 
     @Query("SELECT cm FROM ChatMessage cm WHERE cm.id=:chatMessageId")
-    Optional<ChatMessage> findByChatMessageId(Long chatMessageId);
+    Optional<ChatMessage> findByChatMessageId(UUID chatMessageId);
 }

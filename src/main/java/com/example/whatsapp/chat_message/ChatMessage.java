@@ -9,9 +9,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
@@ -22,15 +24,8 @@ import java.util.List;
 public class ChatMessage {
 
     @Id
-    @SequenceGenerator(
-            name = "chatMessage_sequence",
-            sequenceName = "chatMessage_sequence",
-            allocationSize = 1
-    )
-    @GeneratedValue(strategy = GenerationType.SEQUENCE,
-            generator = "chatMessage_sequence"
-    )
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "chat_id")
@@ -45,8 +40,8 @@ public class ChatMessage {
     private User recipient;
 
     private String text;
-    private String attachmentType;
-    private String attachmentPath;
+    private String fileName;
+    private String fileUrl;
     private String type;
     private LocalDateTime timestamp;
 

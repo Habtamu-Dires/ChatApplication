@@ -38,9 +38,21 @@ public class RegistrationService {
 
         var savedUser = userService.addUser(user);
 
-        return new AuthenticationResponse(savedUser.getUsername());
+        return new AuthenticationResponse(savedUser.getUsername(),
+                savedUser.getPassword());
     }
 
+    public AuthenticationResponse authenticate(LoginRequest request) {
+        User user = userService.findUserByUsername(request.username());
+        if(!user.getPassword().equals(request.password())){
+            throw new InvalidRequestException("Wrong password");
+        }
+
+        return AuthenticationResponse.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .build();
+    }
 }
 
 

@@ -3,23 +3,27 @@ package com.example.whatsapp.groupchat;
 import com.example.whatsapp.chat_message.ChatMessage;
 import com.example.whatsapp.chat_message.ChatMessageService;
 import com.example.whatsapp.chat_dto.ChatNotification;
+import com.example.whatsapp.chat_reaction.EMOJI;
 import com.example.whatsapp.exception.InvalidRequestException;
 import com.example.whatsapp.exception.ResourceNotFoundException;
 import com.example.whatsapp.groupchat.dtos.AddToGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupDTO;
 import com.example.whatsapp.groupchat.dtos.CreateGroupResponse;
 import com.example.whatsapp.groupchat.dtos.UpdateGroupNameDTO;
+import com.example.whatsapp.kafka_config.KafkaConsumer;
 import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.dtos.UserDTO;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,8 @@ public class GroupChatRoomService {
     private final KafkaProducer kafkaProducer;
     private final UserService userService;
     private final ChatMessageService chatMessageService;
+    private final SimpMessagingTemplate messagingTemplate;
+
 
     public GroupChatRoom findByGroupName(String groupName){
       return groupChatRoomRepository.findByGroupName(groupName)
@@ -38,8 +44,8 @@ public class GroupChatRoomService {
             );
     }
 
-    public CreateGroupResponse createGroup(CreateGroupDTO createGroupDTO){
-        User user = userService.findUserByUsername(createGroupDTO.ownerName());
+    public void createGroup(CreateGroupDTO createGroupDTO){
+        userService.findUserByUsername(createGroupDTO.ownerName());
         GroupChatRoom group = groupChatRoomRepository
                 .findByGroupName(createGroupDTO.groupName())
                 .orElse(null);
@@ -48,43 +54,29 @@ public class GroupChatRoomService {
             throw new InvalidRequestException("Group name "
                     + createGroupDTO.groupName() + " already taken");
         }
-        GroupChatRoom groupChatRoom = GroupChatRoom.builder()
-                .owner(user)
-                .groupName(createGroupDTO.groupName())
-                .users(List.of(user))
-                .build();
+        if(createGroupDTO.groupName() == null
+                || createGroupDTO.groupName().isBlank()) {
+            throw new InvalidRequestException("Group Name is required");
+        }
 
-        GroupChatRoom savedGroupChat
-                = groupChatRoomRepository.save(groupChatRoom);
+        kafkaProducer.sendMessage(createGroupDTO);
 
-      return CreateGroupResponse.builder()
-                .groupId(savedGroupChat.getId())
-                .ownerName(savedGroupChat.getOwner().getUsername())
-                .groupName(savedGroupChat.getGroupName())
-                .build();
     }
 
     public void addToGroup(AddToGroupDTO addToGroupDTO) {
 
         GroupChatRoom groupChatRoom = findByGroupName(addToGroupDTO.groupName());
-        User userTobeAdded = userService.findUserByUsername(addToGroupDTO.username());
+        userService.findUserByUsername(addToGroupDTO.username());
         User adderUser = userService.findUserByUsername(addToGroupDTO.addedBy());
 
-//        List<User> groupUsers = groupChatRoomRepository
-//                .findUsersByGroupId(groupChatRoom.getId());
         List<User> userList = groupChatRoom.getUsers();
         if(!userList.contains(adderUser)){
            throw new InvalidRequestException(
                    "User " + adderUser.getUsername() + " not allowed to add users the group"
            );
         }
-
-        userList.add(userTobeAdded);
-        groupChatRoom.setUsers(userList);
-        groupChatRoomRepository.save(groupChatRoom);
-
+        kafkaProducer.sendMessage(addToGroupDTO);
     }
-    
 
     public void sendMessage(ChatNotification chatNotification) {
         userService.findUserByUsername(chatNotification.sender()); //check sender
@@ -94,12 +86,14 @@ public class GroupChatRoomService {
                     "Message type is not allowed"
             );
         }
-
         kafkaProducer.sendMessage(chatNotification);
     }
 
     public GroupChatRoom findGroupChatRoomById(Long id){
-       return groupChatRoomRepository.findById(id).orElse(null);
+       return groupChatRoomRepository.findById(id)
+               .orElseThrow(()-> new ResourceNotFoundException(
+                  "Group with group id " + id + " not found"
+               ));
     }
 
     public ChatMessage saveMessage(ChatNotification chatNotification,
@@ -110,8 +104,8 @@ public class GroupChatRoomService {
                 .groupId(groupChatRoom)
                 .sender(sender)
                 .text(chatNotification.text())
-                .attachmentType(chatNotification.attachmentType())
-                .attachmentPath(chatNotification.attachmentPath())
+                .fileName(chatNotification.fileName())
+                .fileUrl(chatNotification.fileUrl())
                 .type(chatNotification.type())
                 .timestamp(LocalDateTime.now())
                 .build();
@@ -123,27 +117,38 @@ public class GroupChatRoomService {
         return groupChatRoomRepository.findUsersByGroupId(groupId);
     }
 
-
     public List<ChatNotification> getGroupMessages(String groupName) {
         List<ChatNotification> chatNotificationList = new ArrayList<>();
+
+        //find chat reactions
         chatMessageService
                 .findChatMessagesByGroupName(groupName)
                 .forEach(chatMessage -> {
-                chatNotificationList.add(
-                        ChatNotification.builder()
-                                .sender(chatMessage.getSender().getUsername())
-                                .groupName(chatMessage.getGroupId().getGroupName())
-                                .text(chatMessage.getText())
-                                .attachmentType(chatMessage.getAttachmentType())
-                                .attachmentPath(chatMessage.getAttachmentPath())
-                                .type(chatMessage.getType())
-                                .build()
+                    //let get the chat reaction of each message
+                    Map<String, EMOJI> rMap = new HashMap<>();
+                    if(chatMessage.getChatReactionList() != null){
+                        chatMessage.getChatReactionList()
+                                .forEach(cr -> {
+                                    rMap.put(cr.getUser().getUsername(),
+                                            cr.getEmoji());
+                                });
+                    }
+                    chatNotificationList.add(
+                            ChatNotification.builder()
+                                    .id(chatMessage.getId())
+                                    .sender(chatMessage.getSender().getUsername())
+                                    .groupName(chatMessage.getGroupId().getGroupName())
+                                    .text(chatMessage.getText())
+                                    .fileName(chatMessage.getFileName())
+                                    .fileUrl(chatMessage.getFileUrl())
+                                    .type(chatMessage.getType())
+                                    .reactions(rMap)
+                                    .build()
                 );
             });
         return chatNotificationList;
 
     }
-
 
     public void deleteGroupChat(String username, String groupName) {
         var groupChatRoom = findByGroupName(groupName);
@@ -153,10 +158,16 @@ public class GroupChatRoomService {
               "The user " + username + " is not allowed to delete this group"
             );
         }
-        List<ChatMessage> chatMessageLists = chatMessageService
-                .findChatMessagesByGroupName(groupChatRoom.getGroupName());
-        chatMessageLists.forEach(chatMessageService::deleteChatMessage);
-        groupChatRoomRepository.delete(groupChatRoom);
+
+        //send event
+        ChatNotification chatNotif = ChatNotification.builder()
+                .groupName(groupName)
+                .sender(username)
+                .recipient("DELETE")
+                .type("group")
+                .text("DELETE " + groupName)
+                .build();
+        kafkaProducer.sendMessage(chatNotif);
 
     }
     // get group members
@@ -190,6 +201,14 @@ public class GroupChatRoomService {
         }
 
         groupChatRoom.setGroupName(dto.newGroupName());
+        groupChatRoomRepository.save(groupChatRoom);
+    }
+
+    public void deleteGroup(GroupChatRoom groupChatRoom){
+        groupChatRoomRepository.delete(groupChatRoom);
+    }
+
+    public void saveGroup(GroupChatRoom groupChatRoom){
         groupChatRoomRepository.save(groupChatRoom);
     }
 }

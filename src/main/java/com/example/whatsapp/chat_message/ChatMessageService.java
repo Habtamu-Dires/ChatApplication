@@ -2,21 +2,22 @@ package com.example.whatsapp.chat_message;
 
 
 import com.example.whatsapp.chat_dto.ChatNotification;
+import com.example.whatsapp.chat_reaction.EMOJI;
 import com.example.whatsapp.chatroom.ChatRoom;
 import com.example.whatsapp.chatroom.ChatRoomService;
 import com.example.whatsapp.exception.ResourceNotFoundException;
 import com.example.whatsapp.groupchat.GroupChatRoom;
 import com.example.whatsapp.groupchat.GroupChatRoomRepository;
+import com.example.whatsapp.kafka_config.KafkaConsumer;
 import com.example.whatsapp.kafka_config.KafkaProducer;
 import com.example.whatsapp.user.User;
 import com.example.whatsapp.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class ChatMessageService {
     private final GroupChatRoomRepository groupChatRoomRepository;
 
     //get chatMessage by chatId
-    public ChatMessage findChatMessageById(Long chatMessageId){
+    public ChatMessage findChatMessageById(UUID chatMessageId){
       return chatMessageRepository.findByChatMessageId(chatMessageId)
               .orElseThrow(()-> new ResourceNotFoundException(
                       "Chat message with id " + chatMessageId + " not found")
@@ -53,8 +54,8 @@ public class ChatMessageService {
                 .sender(sender)
                 .recipient(recipient)
                 .text(chatNotification.text())
-                .attachmentType(chatNotification.attachmentType())
-                .attachmentPath(chatNotification.attachmentPath())
+                .fileName(chatNotification.fileName())
+                .fileUrl(chatNotification.fileUrl())
                 .type(chatNotification.type())
                 .timestamp(LocalDateTime.now())
                 .build();
@@ -92,15 +93,25 @@ public class ChatMessageService {
                 .orElse(List.of());
 
         List<ChatNotification> chatNotificationList = new ArrayList<>();
+
         chatMessages.forEach(chatMessage -> {
+            //get message reactions
+            Map<String, EMOJI> rMap = new HashMap<>();
+            chatMessage.getChatReactionList()
+            .forEach(reaction ->
+                    rMap.put(reaction.getUser().getUsername(),
+                            reaction.getEmoji())
+            );
             chatNotificationList.add(
                     ChatNotification.builder()
+                            .id(chatMessage.getId())
                             .sender(chatMessage.getSender().getUsername())
                             .recipient(chatMessage.getRecipient().getUsername())
                             .text(chatMessage.getText())
-                            .attachmentType(chatMessage.getAttachmentType())
-                            .attachmentPath(chatMessage.getAttachmentPath())
+                            .fileName(chatMessage.getFileName())
+                            .fileUrl(chatMessage.getFileUrl())
                             .type(chatMessage.getType())
+                            .reactions(rMap)
                             .build()
             );
         });
@@ -113,7 +124,7 @@ public class ChatMessageService {
         GroupChatRoom groupChatRoom = groupChatRoomRepository
                 .findByGroupName(groupName)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Message with " + groupName + " not found"
+                        "Group with " + groupName + " not found"
                 ));
 
         Long groupId = groupChatRoom.getId();

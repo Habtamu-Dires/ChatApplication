@@ -40,6 +40,7 @@ public class UserMapper {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phoneNumber(user.getPhoneNumber())
+                .password(user.getPassword()) // to be removed
                 .build();
     }
 }

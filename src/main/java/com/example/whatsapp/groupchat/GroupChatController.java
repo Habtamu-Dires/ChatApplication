@@ -27,9 +27,9 @@ public class GroupChatController {
     @PostMapping("/send")
     public ResponseEntity<ApiResponse<String>> sendMessage(
             @RequestBody ChatNotification chatNotification){
-        var filePath = chatNotification.attachmentPath();
-        if(filePath != null && !filePath.isBlank()) {
-            if(!Files.exists(Paths.get(filePath))) {
+        var fileUrl = chatNotification.fileUrl();
+        if(fileUrl != null && !fileUrl.isBlank()) {
+            if(!Files.exists(Paths.get(fileUrl))) {
                 throw new InvalidRequestException(
                         "The required attachment was not sent successfully"
                 );
@@ -44,21 +44,24 @@ public class GroupChatController {
     }
     //get group chat messages
     @GetMapping("/messages/{groupName}")
-    public ResponseEntity<List<ChatNotification>> findGroupMessages(
+    public ResponseEntity<ApiResponse<List<ChatNotification>>> findGroupMessages(
             @PathVariable("groupName") String groupName
     ){
-        return ResponseEntity.ok(groupChatRoomService.getGroupMessages(groupName));
+       List<ChatNotification> chatNotificationList
+                = groupChatRoomService.getGroupMessages(groupName);
+
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,chatNotificationList,"Message fetched successfully"
+        ));
     }
     // create group
     @PostMapping("/create-group")
-    public ResponseEntity<ApiResponse<CreateGroupResponse>> createGroup(
+    public ResponseEntity<ApiResponse<String>> createGroup(
             @RequestBody CreateGroupDTO createGroupDto
     ){
+        groupChatRoomService.createGroup(createGroupDto);
 
-        CreateGroupResponse group
-                = groupChatRoomService.createGroup(createGroupDto);
-
-        return ResponseEntity.ok(new ApiResponse<>(true,group,
+        return ResponseEntity.ok(new ApiResponse<>(true,null,
                 "group successfully created"));
     }
 
@@ -102,8 +105,6 @@ public class GroupChatController {
         ));
     }
 
-
-
     //delete a group
     @DeleteMapping("delete-group/{groupName}/{ownerName}")
     public ResponseEntity<ApiResponse<String>> deleteGroup(
@@ -113,9 +114,7 @@ public class GroupChatController {
 
        return ResponseEntity.ok(
                new ApiResponse<>(
-                       true,
-                       groupName + " deleted",
-                       "Success"
+                       true, groupName + " deleted", "Success"
                )
        );
 

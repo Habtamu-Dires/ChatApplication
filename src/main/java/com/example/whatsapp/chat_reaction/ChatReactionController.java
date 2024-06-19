@@ -2,12 +2,13 @@ package com.example.whatsapp.chat_reaction;
 
 import com.example.whatsapp.api_response.ApiResponse;
 import com.example.whatsapp.chat_reaction.dtos.ChatReactionDTO;
-import com.example.whatsapp.chat_reaction.dtos.ChatResponseDTO;
+import com.example.whatsapp.chat_reaction.dtos.ChatReactionReqResDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/chat-reaction")
@@ -19,7 +20,7 @@ public class ChatReactionController {
     //get chat message reactions
     @GetMapping("/{chatMessageId}")
     public ResponseEntity<ApiResponse<List<ChatReactionDTO>>> getChatReactions(
-           @PathVariable("chatMessageId") Long chatMessageId){
+           @PathVariable("chatMessageId") UUID chatMessageId){
         List<ChatReactionDTO> chatReactions
                 = chatReactionService.getChatReactions(chatMessageId);
         return ResponseEntity.ok(new ApiResponse<>(
@@ -30,20 +31,15 @@ public class ChatReactionController {
     }
 
     // add/remove chat message reactions
-    @PostMapping("add-remove/{chatMessageId}")
-    public ResponseEntity<ApiResponse<List<ChatReactionDTO>>> addChatResponse(
-            @PathVariable("chatMessageId") Long chatMessageId,
-            @RequestBody ChatResponseDTO chatResponseDTO
+    @PostMapping("/add-remove")
+    public ResponseEntity<ApiResponse<String>> addChatResponse(
+            @RequestBody ChatReactionReqResDTO chatReactionReqResDTO
     ){
-        List<ChatReactionDTO> chatReactionDTOS
-                = chatReactionService.addRemoveChatReaction(
-                        chatMessageId,
-                        chatResponseDTO.username(),
-                        chatResponseDTO.emoji()
-        );
+        chatReactionService.addRemoveChatReaction(chatReactionReqResDTO);
 
-        return ResponseEntity.ok(new ApiResponse<>(true,
-                chatReactionDTOS, "success"));
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, null, "success"
+        ));
     }
 
 }

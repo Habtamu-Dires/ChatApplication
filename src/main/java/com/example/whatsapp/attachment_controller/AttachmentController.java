@@ -29,10 +29,10 @@ public class AttachmentController {
     private long attachmentSizeLimit;
 
     @PostMapping(value = "/upload-file", consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse<String>> uploadFile(@RequestPart("file") MultipartFile file){
+    public ResponseEntity<ApiResponse<FileDTO>> uploadFile(@RequestPart("file") MultipartFile file){
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(
-                    false,"", "Please Select a file")
+                    false,null, "Please Select a file")
             );
         }
         String fileType;
@@ -52,11 +52,11 @@ public class AttachmentController {
 
     }
 
-    public ResponseEntity<ApiResponse<String>> uploadPicture(MultipartFile picture) {
+    public ResponseEntity<ApiResponse<FileDTO>> uploadPicture(MultipartFile picture) {
 
         if (picture.getSize() > attachmentSizeLimit) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiResponse<>(
-                    false, "","Picture size exceeds the limit"
+                    false, null,"Picture size exceeds the limit"
                     )
             );
         }
@@ -68,7 +68,7 @@ public class AttachmentController {
 
             } catch (IOException e) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                        new ApiResponse<>(false, "",
+                        new ApiResponse<>(false, null,
                                 "Unable to create the directory " + e.getMessage())
                 );
             }
@@ -78,22 +78,22 @@ public class AttachmentController {
             Path filePath = Paths.get(pictureDirectory, Objects.requireNonNull(picture.getOriginalFilename()));
             Files.copy(picture.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             String s = Files.probeContentType(filePath);
-            System.out.println("The file type " + s);
-            return ResponseEntity.ok(new ApiResponse<>(true,
-                    filePath.toString(),
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true,
+                    new FileDTO(picture.getOriginalFilename(),filePath.toString()),
                     "Picture uploaded successfully. "));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(
-                    false, "", "Failed to upload picture")
+                    false, null, "Failed to upload picture")
             );
         }
     }
 
-    public ResponseEntity<ApiResponse<String>> uploadVideo(MultipartFile video) {
+    public ResponseEntity<ApiResponse<FileDTO>> uploadVideo(MultipartFile video) {
 
         if (video.getSize() > attachmentSizeLimit) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiResponse<>(
-                            false, "","Video size exceeds the limit"
+                            false, null,"Video size exceeds the limit"
                     )
             );
         }
@@ -105,7 +105,7 @@ public class AttachmentController {
                 Files.createDirectories(Paths.get(videoDirectory));
             } catch (IOException e) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                        new ApiResponse<>(false, "",
+                        new ApiResponse<>(false, null,
                                 "Unable to create the directory " + e.getMessage())
                 );
             }
@@ -113,12 +113,13 @@ public class AttachmentController {
         try {
             Path filePath = Paths.get(videoDirectory, Objects.requireNonNull(video.getOriginalFilename()));
             Files.copy(video.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            return ResponseEntity.ok(new ApiResponse<>(true,
-                    filePath.toString(),
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true,
+                    new FileDTO(video.getOriginalFilename(), filePath.toString()),
                     "Video uploaded successfully. "));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(
-                    false, "", "Failed to upload the video")
+                    false, null, "Failed to upload the video")
             );
         }
     }
