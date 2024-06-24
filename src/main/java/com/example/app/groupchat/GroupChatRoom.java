@@ -34,7 +34,7 @@ public class GroupChatRoom {
     @JoinColumn(name = "owner")
     private User owner;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_group",
     joinColumns = @JoinColumn(name = "group_id"),
     inverseJoinColumns =@JoinColumn(name = "user_id") )

@@ -1,4 +1,4 @@
-package com.example.app.registration;
+package com.example.app.authentication;
 
 import com.example.app.api_response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RegistrationController {
 
-    private final RegistrationService authenticationService;
+    private final AuthenticationService authenticationService;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthenticationResponse>> login(

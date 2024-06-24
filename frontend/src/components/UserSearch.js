@@ -7,19 +7,13 @@ const UserSearch = (props) => {
     const [suggestions, setSuggestions] = useState([]);
     const [display, setDisplay] = useState("SEARCH");
     const [selectedUser, setSelectedUser] = useState();    
-
-    function encodeCredentials(username, password) {
-        return btoa(`${username}:${password}`)
-    }
-    const encodedCredentials = encodeCredentials(
-        props.authUser.username, props.authUser.password
-    );
+    
 
     const debouncedFetchUsers = debounce( (query) => {
         if (query) {
          fetch(`http://localhost:8080/api/v1/users/search?username=${query}`,{
                 headers: {
-                    "Authorization": `Basic ${encodedCredentials}`,
+                    "Authorization": `Bearer ${props.authUser.jwtToken}`,
                     "Content-Type": "application/json",
                 },
                 credentials: "same-origin"
@@ -88,7 +82,6 @@ const UserSearch = (props) => {
                     fetchUserContacts={props.fetchUserContacts}
                     authUser={props.authUser}
                     username={selectedUser} 
-                    encodedCredentials={encodedCredentials}
                 />
             }
         </div>        

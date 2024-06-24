@@ -18,17 +18,14 @@ function Login(props){
    .then(apiRes => {
       console.log(apiRes)
       if(apiRes.success){
-         const {username, password} = apiRes.data;
-         props.setAuthUser({username,password});
+         const {username, jwtToken} = apiRes.data;
+         localStorage.setItem("jwtToken",jwtToken);
+         localStorage.setItem("username", username);
+         props.setAuthUser({username, jwtToken});
       }
              
    })
    .catch(err => console.log('error ' + err))      
-   }
-   
-   const handleClick = ({provider}) => {
-      console.log("provider" + provider);
-      window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
    }
 
 

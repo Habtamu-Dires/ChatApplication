@@ -26,19 +26,12 @@ public class GroupChatController {
     @PostMapping("/send")
     public ResponseEntity<ApiResponse<String>> sendMessage(
             @RequestBody ChatNotification chatNotification){
-        var fileUrl = chatNotification.fileUrl();
-        if(fileUrl != null && !fileUrl.isBlank()) {
-            if(!Files.exists(Paths.get(fileUrl))) {
-                throw new InvalidRequestException(
-                        "The required attachment was not sent successfully"
-                );
-            }
-        }
+
         groupChatRoomService.sendMessage(chatNotification);
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "",
-                "Message Send Successfully")
+                "Message Sent Successfully")
         );
     }
     //get group chat messages

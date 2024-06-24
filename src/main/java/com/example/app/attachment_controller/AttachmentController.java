@@ -37,7 +37,6 @@ public class AttachmentController {
         }
         String fileType;
         fileType = file.getContentType();
-        System.out.println("File type " + fileType);
         if(fileType == null){
             throw new InvalidRequestException("Could not determine file type");
         }

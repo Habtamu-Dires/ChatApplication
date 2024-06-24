@@ -21,20 +21,9 @@ public class ChatMessageController {
     @PostMapping("/send")
     public ResponseEntity<ApiResponse<String>> sendMessage(
             @RequestBody ChatNotification chatNotification
-           //@Payload ChatNotification chatNotification
     )
     {
-        String filePath = chatNotification.fileUrl();
-        if(filePath != null  && !filePath.isBlank()){
-           if(!Files.exists(Paths.get(filePath))) {
-               return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                       .body(new ApiResponse<>(
-                               false,
-                               null,
-                               "The required attachment was not sent successfully")
-                       );
-           }
-        }
+
         chatMessageService.sendMessage(chatNotification);
         return ResponseEntity.ok(new ApiResponse<>(
                 true,"message sent","message send successfully"));

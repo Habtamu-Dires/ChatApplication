@@ -190,31 +190,31 @@ public class KafkaConsumer {
 
             //send message notification to receiver
             messagingTemplate.convertAndSendToUser(
-                    chatNotification.recipient(),
-                    "/my-messages",
-                    ChatNotification.builder()
-                            .id(savedMsg.getId())
-                            .sender(savedMsg.getSender().getUsername())
-                            .recipient(savedMsg.getRecipient().getUsername())
-                            .text(savedMsg.getText())
-                            .fileName(savedMsg.getFileName())
-                            .fileUrl(savedMsg.getFileUrl())
-                            .reactions(rMap)
-                            .build()
+                chatNotification.recipient(),
+                "/my-messages",
+                ChatNotification.builder()
+                        .id(savedMsg.getId())
+                        .sender(savedMsg.getSender().getUsername())
+                        .recipient(savedMsg.getRecipient().getUsername())
+                        .text(savedMsg.getText())
+                        .fileName(savedMsg.getFileName())
+                        .fileUrl(savedMsg.getFileUrl())
+                        .reactions(rMap)
+                        .build()
             );
             //send notification to the sender
             messagingTemplate.convertAndSendToUser(
-                    chatNotification.sender(),
-                    "/my-messages",
-                    ChatNotification.builder()
-                            .id(savedMsg.getId())
-                            .sender(savedMsg.getSender().getUsername())
-                            .recipient(savedMsg.getRecipient().getUsername())
-                            .text(savedMsg.getText())
-                            .fileName(savedMsg.getFileName())
-                            .fileUrl(savedMsg.getFileUrl())
-                            .reactions(rMap)
-                            .build()
+                chatNotification.sender(),
+                "/my-messages",
+                ChatNotification.builder()
+                        .id(savedMsg.getId())
+                        .sender(savedMsg.getSender().getUsername())
+                        .recipient(savedMsg.getRecipient().getUsername())
+                        .text(savedMsg.getText())
+                        .fileName(savedMsg.getFileName())
+                        .fileUrl(savedMsg.getFileUrl())
+                        .reactions(rMap)
+                        .build()
             );
         }
         // group notification
@@ -229,26 +229,22 @@ public class KafkaConsumer {
                 chatMessageLists.forEach(chatMessageService::deleteChatMessage);
                 //send notification
                 groupChatRoomService.getGroupMembers(groupChatRoom.getId())
-                        .forEach(user -> {
-                            //send message notification to user members
-                            //except to the sender it self
-                            if(!user.getUsername().equals(chatNotification.sender())) {
-                                messagingTemplate.convertAndSendToUser(
-                                        user.getUsername(),
-                                        "/my-groups",
-                                        ChatNotification.builder()
-                                                .id(null)
-                                                .groupName(chatNotification.groupName())
-                                                .sender(chatNotification.sender())
-                                                .recipient("DELETE")
-                                                .text(null)
-                                                .fileName(null)
-                                                .fileUrl(null)
-                                                .build()
-                                );
-                            }
-
-                        });
+                    .forEach(user -> {
+                        //send message notification to user members
+                        messagingTemplate.convertAndSendToUser(
+                                user.getUsername(),
+                                "/my-groups",
+                                ChatNotification.builder()
+                                        .id(null)
+                                        .groupName(chatNotification.groupName())
+                                        .sender(chatNotification.sender())
+                                        .recipient("DELETE")
+                                        .text(null)
+                                        .fileName(null)
+                                        .fileUrl(null)
+                                        .build()
+                            );
+                    });
                 groupChatRoomService.deleteGroup(groupChatRoom);
             } else {    // it is a group message
                 //save message
@@ -266,22 +262,22 @@ public class KafkaConsumer {
                 }
 
                 groupChatRoomService.getGroupMembers(groupChatRoom.getId())
-                        .forEach(user -> {
-                            //send message notification to group members
-                            messagingTemplate.convertAndSendToUser(
-                                user.getUsername(),
-                                "/my-groups",
-                                ChatNotification.builder()
-                                        .id(savedMsg.getId())
-                                        .sender(savedMsg.getSender().getUsername())
-                                        .groupName(savedMsg.getGroupId().getGroupName())
-                                        .text(savedMsg.getText())
-                                        .fileName(savedMsg.getFileName())
-                                        .fileUrl(savedMsg.getFileUrl())
-                                        .reactions(rMap)
-                                        .build()
-                            );
-                        });
+                    .forEach(user -> {
+                        //send message notification to group members
+                        messagingTemplate.convertAndSendToUser(
+                            user.getUsername(),
+                            "/my-groups",
+                            ChatNotification.builder()
+                                    .id(savedMsg.getId())
+                                    .sender(savedMsg.getSender().getUsername())
+                                    .groupName(savedMsg.getGroupId().getGroupName())
+                                    .text(savedMsg.getText())
+                                    .fileName(savedMsg.getFileName())
+                                    .fileUrl(savedMsg.getFileUrl())
+                                    .reactions(rMap)
+                                    .build()
+                        );
+                    });
             }
 
         }

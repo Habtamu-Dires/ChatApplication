@@ -3,12 +3,14 @@ package com.example.app.groupchat;
 import com.example.app.chat_dto.ChatNotification;
 import com.example.app.chat_message.ChatMessage;
 import com.example.app.chat_message.ChatMessageService;
+import com.example.app.exception.ActionNotAllowedException;
 import com.example.app.exception.InvalidRequestException;
 import com.example.app.exception.ResourceNotFoundException;
 import com.example.app.groupchat.dtos.AddToGroupDTO;
 import com.example.app.groupchat.dtos.CreateGroupDTO;
 import com.example.app.groupchat.dtos.UpdateGroupNameDTO;
 import com.example.app.kafka_config.KafkaProducer;
+import com.example.app.security_config.SecurityCheck;
 import com.example.app.user.User;
 import com.example.app.user.UserService;
 import com.example.app.user.dtos.UserDTO;
@@ -16,7 +18,11 @@ import com.example.app.chat_reaction.EMOJI;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +40,6 @@ public class GroupChatRoomService {
     private final ChatMessageService chatMessageService;
     private final SimpMessagingTemplate messagingTemplate;
 
-
     public GroupChatRoom findByGroupName(String groupName){
       return groupChatRoomRepository.findByGroupName(groupName)
             .orElseThrow(()-> new ResourceNotFoundException(
@@ -43,6 +48,11 @@ public class GroupChatRoomService {
     }
 
     public void createGroup(CreateGroupDTO createGroupDTO){
+        // is the user logged in ?
+        if(SecurityCheck.isTheUserNotLoggedIn(createGroupDTO.ownerName())){
+            throw new ActionNotAllowedException();
+        }
+
         userService.findUserByUsername(createGroupDTO.ownerName());
         GroupChatRoom group = groupChatRoomRepository
                 .findByGroupName(createGroupDTO.groupName())
@@ -62,10 +72,15 @@ public class GroupChatRoomService {
     }
 
     public void addToGroup(AddToGroupDTO addToGroupDTO) {
+        // is adder logged in?
+        if(SecurityCheck.isTheUserNotLoggedIn(addToGroupDTO.addedBy())){
+            throw new ActionNotAllowedException();
+        }
 
         GroupChatRoom groupChatRoom = findByGroupName(addToGroupDTO.groupName());
         userService.findUserByUsername(addToGroupDTO.username());
         User adderUser = userService.findUserByUsername(addToGroupDTO.addedBy());
+        User userTobeAdded = userService.findUserByUsername(addToGroupDTO.username());
 
         List<User> userList = groupChatRoom.getUsers();
         if(!userList.contains(adderUser)){
@@ -73,17 +88,53 @@ public class GroupChatRoomService {
                    "User " + adderUser.getUsername() + " not allowed to add users the group"
            );
         }
+
+        if(userList.contains(userTobeAdded)) {
+            throw new InvalidRequestException(
+                    "User " + userTobeAdded.getUsername() + " is already in the group"
+            );
+        }
         kafkaProducer.sendMessage(addToGroupDTO);
     }
 
     public void sendMessage(ChatNotification chatNotification) {
-        userService.findUserByUsername(chatNotification.sender()); //check sender
-        findByGroupName(chatNotification.groupName()); // check group
+        //is the sender the one logged in?
+        if(SecurityCheck.isTheUserNotLoggedIn(chatNotification.sender())){
+            //delete attachment if it exists
+            SecurityCheck.deleteAttachment(chatNotification);
+            throw new ActionNotAllowedException();
+        }
+        // check the type of the message
         if(!chatNotification.type().equals("group")) {
+            //delete attachment if it exists
+            SecurityCheck.deleteAttachment(chatNotification);
             throw new InvalidRequestException(
                     "Message type is not allowed"
             );
         }
+
+        //check if the attachment is attached
+        var fileUrl = chatNotification.fileUrl();
+        if(fileUrl != null && !fileUrl.isBlank()) {
+            if(!Files.exists(Paths.get(fileUrl))) {
+                throw new InvalidRequestException(
+                        "The required attachment was not sent successfully"
+                );
+            }
+        }
+        userService.findUserByUsername(chatNotification.sender()); //check sender
+        GroupChatRoom groupChatRoom = findByGroupName(chatNotification.groupName()); // check group
+
+        //is the user the member of the group
+        boolean isMember =  groupChatRoom.getUsers().stream()
+                    .anyMatch(u -> u.getUsername().equals(chatNotification.sender()));
+
+        if(!isMember){
+            //delete attachment if it exists
+            SecurityCheck.deleteAttachment(chatNotification);
+            throw new ActionNotAllowedException();
+        }
+
         kafkaProducer.sendMessage(chatNotification);
     }
 
@@ -116,6 +167,17 @@ public class GroupChatRoomService {
     }
 
     public List<ChatNotification> getGroupMessages(String groupName) {
+        GroupChatRoom groupChatRoom = findByGroupName(groupName);
+        //IS the logged user a member of the group
+        String loggedUsername = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        boolean isMember = groupChatRoom.getUsers().stream()
+                .anyMatch(u -> u.getUsername().equals(loggedUsername));
+
+        if(!isMember){
+            throw new ActionNotAllowedException();
+        }
+
         List<ChatNotification> chatNotificationList = new ArrayList<>();
 
         //find chat reactions
@@ -149,6 +211,10 @@ public class GroupChatRoomService {
     }
 
     public void deleteGroupChat(String username, String groupName) {
+        // is the owner name the one who logged in?
+        if(SecurityCheck.isTheUserNotLoggedIn(username)){
+            throw new ActionNotAllowedException();
+        }
         var groupChatRoom = findByGroupName(groupName);
         User owner = userService.findUserByUsername(username);
         if(!groupChatRoom.getOwner().getId().equals(owner.getId())){
@@ -189,6 +255,10 @@ public class GroupChatRoomService {
     }
 
     public void updateGroupName(UpdateGroupNameDTO dto) {
+        // is the logged user the owner
+        if(SecurityCheck.isTheUserNotLoggedIn(dto.ownerName())){
+            throw new ActionNotAllowedException();
+        }
         GroupChatRoom groupChatRoom = findByGroupName(dto.oldGroupName());
         User user = userService.findUserByUsername(dto.ownerName());
         if(!groupChatRoom.getOwner().getId().equals(user.getId())){

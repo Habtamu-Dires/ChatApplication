@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### jwt secret key ##
+/src/main/resources/application.yml

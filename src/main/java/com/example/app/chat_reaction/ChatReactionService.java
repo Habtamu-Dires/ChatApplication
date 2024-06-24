@@ -1,11 +1,17 @@
 package com.example.app.chat_reaction;
 
+import com.example.app.chat_message.ChatMessage;
 import com.example.app.chat_message.ChatMessageService;
 import com.example.app.chat_reaction.dtos.ChatReactionDTO;
 import com.example.app.chat_reaction.dtos.ChatReactionReqResDTO;
+import com.example.app.exception.ActionNotAllowedException;
+import com.example.app.exception.InvalidRequestException;
 import com.example.app.kafka_config.KafkaProducer;
+import com.example.app.security_config.SecurityCheck;
+import com.example.app.user.User;
 import com.example.app.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,7 +29,29 @@ public class ChatReactionService {
 
     // get chat reaction
     public List<ChatReactionDTO> getChatReactions(UUID chatMessageId) {
-        chatMessageService.findChatMessageById(chatMessageId);
+       ChatMessage chatMessage = chatMessageService
+               .findChatMessageById(chatMessageId);
+
+       //is the user allowed to get the reactions
+       String loggedUsername = SecurityContextHolder.getContext()
+                                .getAuthentication().getName();
+
+       if(chatMessage.getGroupId() == null) { //private chat
+           if(!chatMessage.getSender().getUsername().equals(loggedUsername)
+                && !chatMessage.getRecipient().getUsername().equals(loggedUsername)
+           ) {
+               throw new ActionNotAllowedException();
+           }
+       } else { //group message
+           boolean isMember
+                   =  chatMessage.getGroupId().getUsers()
+                   .stream()
+                   .anyMatch(u -> u.getUsername().equals(loggedUsername));
+
+           if(!isMember){
+               throw new ActionNotAllowedException();
+           }
+       }
 
         return chatReactionRepository.findByChatMessage(chatMessageId)
                 .stream()
@@ -42,9 +70,15 @@ public class ChatReactionService {
     public void addRemoveChatReaction(
             ChatReactionReqResDTO dto
     ) {
+        //is the user the one logged in ?
+        if(SecurityCheck.isTheUserNotLoggedIn(dto.getUsername())){
+            throw new ActionNotAllowedException();
+        }
+        // check if the chat message id and username are valid
         chatMessageService.findChatMessageById(dto.getChatMessageId());
         userService.findUserByUsername(dto.getUsername());
 
+        //find chat message reaction by chat message id and username
         findByChatMessageAndUser(dto.getChatMessageId(), dto.getUsername())
                 .ifPresentOrElse(chatReaction -> {
                     if(chatReaction.getEmoji().toString().equals(dto.getEmoji())){
@@ -54,7 +88,24 @@ public class ChatReactionService {
                         // status update
                         dto.setStatus("UPDATE");
                     }
-                } ,() -> {
+                } ,() -> { // chat message reaction not found
+                    //check if user is allowed to send reaction to the message
+                  ChatMessage chatMessage =  chatMessageService
+                          .findChatMessageById(dto.getChatMessageId());
+                  if(chatMessage.getGroupId() == null) { //private chat
+                      if(!chatMessage.getSender().getUsername().equals(dto.getUsername())
+                        && !chatMessage.getRecipient().getUsername().equals(dto.getUsername())){
+                          throw new ActionNotAllowedException();
+                      }
+                  } else { //group message
+                    boolean isMember =  chatMessage.getGroupId().getUsers()
+                              .stream()
+                              .anyMatch(u -> u.getUsername().equals(dto.getUsername()));
+
+                    if(!isMember){
+                        throw new ActionNotAllowedException();
+                    }
+                  }
                     // status new
                     dto.setStatus("ADD");
                 }
@@ -65,8 +116,8 @@ public class ChatReactionService {
 
     //find by Message and User
     public Optional<ChatReaction> findByChatMessageAndUser(UUID chatMessageId, String username){
-        return chatReactionRepository.findByChatMessageAndUser(chatMessageId,
-                username);
+        return chatReactionRepository.findByChatMessageAndUser(
+                chatMessageId,  username);
     }
 
     //save

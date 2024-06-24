@@ -12,13 +12,6 @@ public interface ChatReactionRepository extends JpaRepository<ChatReaction, Chat
     @Query("SELECT cr FROM ChatReaction cr WHERE cr.chatMessage.id=:chatMessageId")
     List<ChatReaction> findByChatMessage(UUID chatMessageId);
 
-//    @Query("""
-//            SELECT cr FROM ChatReaction cr
-//            WHERE cr.chatMessage.id=:chatMessageId
-//            AND cr.emoji.name()=:value
-//            """
-//    )
-//    Optional<ChatReaction> findByChatMessageAndEmoji(UUID chatMessageId, String value);
 
     @Query("""
             SELECT cr FROM ChatReaction cr

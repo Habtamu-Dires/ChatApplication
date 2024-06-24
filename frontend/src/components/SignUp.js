@@ -16,9 +16,11 @@ function SingUp(props){
         .then(apiRes => {
             console.log(apiRes)
             if(apiRes.success){
-                const {username, password} = apiRes.data;
-               props.setAuthUser({username,password});
-          }
+                const {username, jwtToken} = apiRes.data;
+                localStorage.setItem("jwtToken",jwtToken);
+                localStorage.setItem("username", username);
+                props.setAuthUser({username, jwtToken});
+            }
         })
         .catch(err => console.log('error ' + err))
     }

@@ -22,7 +22,7 @@ const ChatRoom = (props) => {
     const [tab,setTab] =useState("SEARCH");
     const [mode, setMode] = useState("MESSAGE");
     const [userData, setUserData] = useState({
-        username: props.authUser.username,
+        username: localStorage.getItem("username"),
         receivername: '',
         connected: false,
         message: ''
@@ -38,7 +38,7 @@ const ChatRoom = (props) => {
     }, []);
 
     const headers = {
-        "Authorization": `Basic ${props.encodedCredentials}`
+        "Authorization":`Bearer ${props.authUser.jwtToken}`
     };
     const connect = () => {
         const socket = new SockJS('http://localhost:8080/ws');
@@ -73,7 +73,7 @@ const ChatRoom = (props) => {
     const fetchUserContacts = () => {
         fetch(`http://localhost:8080/api/v1/users/contacts/${userData.username}`,{
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -96,16 +96,19 @@ const ChatRoom = (props) => {
     }
 
     //fech groups
-    const fetchUserGroups =()=>{
+    const fetchUserGroups =()=> {
+        console.log("User group is bing called ");
         fetch(`http://localhost:8080/api/v1/users/groups/${props.authUser.username}`,{
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
         })
         .then(response => response.json())
         .then(apiRes => {
+            groups.clear();
+            setGroups(new Map(groups));
             if(apiRes.success){
                 apiRes.data.forEach(groupName => {
                     groups.set(groupName,[]);
@@ -120,10 +123,9 @@ const ChatRoom = (props) => {
         .catch(err => console.log(err));
     }
 
-    //on messager reaction
+    //on message reaction
     const onMssageReaction = (payload) => {
         let payloadData = JSON.parse(payload.body);
-        console.log("The group " + payloadData.groupName);
         if(payloadData.groupName !== null){
             fetchGroupMessages(payloadData.groupName);
         }
@@ -189,7 +191,7 @@ const ChatRoom = (props) => {
                             method: "POST",
                             body: formData,
                             headers: {
-                                "Authorization": `Basic ${props.encodedCredentials}`
+                                "Authorization": `Bearer ${props.authUser.jwtToken}`
                             },
                             credentials: "same-origin"
                     });
@@ -244,7 +246,7 @@ const ChatRoom = (props) => {
             const response = await axios.post('http://localhost:8080/api/v1/chat/send',
                 JSON.stringify(chatMessage),{
                 headers: {
-                    "Authorization": `Basic ${props.encodedCredentials}`,
+                    "Authorization": `Bearer ${props.authUser.jwtToken}`,
                     "Content-Type": "application/json",
                 },
                 credentials: "same-origin"
@@ -295,7 +297,7 @@ const ChatRoom = (props) => {
                 method: "POST",
                 body: JSON.stringify(chatMessage),
                 headers: {
-                    "Authorization": `Basic ${props.encodedCredentials}`,
+                    "Authorization": `Bearer ${props.authUser.jwtToken}`,
                     "Content-Type": "application/json",
                 },
                 credentials: "same-origin"
@@ -332,7 +334,7 @@ const ChatRoom = (props) => {
         
        const response = await axios.get(`http://localhost:8080/api/v1/chat/messages/${userData.username}/${username}`,{
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -355,17 +357,14 @@ const ChatRoom = (props) => {
                     setPrivateChats(new Map(privateChats));
                 });
             }
-        }
-
-    
+        }    
     }
 
     // fetch a group messages
     function fetchGroupMessages(groupName)  {
-        console.log("I'm evne be called with groupName " + groupName);
         fetch(`http://localhost:8080/api/v1/group-chat/messages/${groupName}`,{
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -399,27 +398,6 @@ const ChatRoom = (props) => {
         .catch(err => console.log(err));
     }
 
-    const logout = () => {
-        
-        fetch('http://localhost:8080/api/v1/auth/logout', {
-            method: 'POST',
-            headers: {
-                "Authorization": "Bearer " + props.authUser.token,
-                "Content-Type": "application/json",
-            },
-            credentials: "same-origin"
-        })
-        .then(response => {
-            console.log("The log out resposne " + response)
-            console.log(response.ok)
-            console.log(props.authUser.token)
-            if(response.ok){
-                props.setAuthUser(null);
-            }
-        })
-        .catch(err => console.log(err))
-    }
-
     const updateProfile = () => {
         navigate('/edit-profile')
     }
@@ -440,7 +418,7 @@ const ChatRoom = (props) => {
             method: 'POST',
             body:JSON.stringify(createGroup),
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -448,7 +426,9 @@ const ChatRoom = (props) => {
         .then(response => response.json())
         .then(apiRes =>{
             if(apiRes.success){
-                fetchUserGroups();
+                groups.set(groupName, []);
+                setGroups(new Map(groups))
+                // fetchUserGroups();
             }
         })
         .catch(err => console.log(err));
@@ -464,7 +444,7 @@ const ChatRoom = (props) => {
         fetch(`http://localhost:8080/api/v1/group-chat/delete-group/${tab}/${userData.username}`,{
             method: "DELETE",
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -472,10 +452,12 @@ const ChatRoom = (props) => {
         .then(response => response.json())
         .then(apiRes => {
             if(apiRes.success){
-                setMode("MESSAGE");
-                setTab("SEARCH");
                 groups.delete(tab);
                 setGroups(new Map(groups));
+                setMode("MESSAGE");
+                setTab("SEARCH");           
+
+                console.log("wow");
             } else {
                 console.log(apiRes.message)
             }
@@ -517,7 +499,7 @@ const ChatRoom = (props) => {
         ,JSON.stringify(message),{
         
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin" 
@@ -529,6 +511,30 @@ const ChatRoom = (props) => {
             alert(apiRes.message);
         }        
       }
+
+    //logout
+    const logout = () => {
+        
+        fetch('http://localhost:8080/api/v1/logout', {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
+                "Content-Type": "application/json",
+            },
+            credentials: "same-origin"
+        })
+        .then(response => {
+                props.setAuthUser(null);
+                localStorage.removeItem("jwtToken");
+                localStorage.removeItem("username");
+        })
+        .catch(err => {
+            console.log(err);
+            props.setAuthUser(null);
+            localStorage.removeItem("jwtToken");
+            localStorage.removeItem("username");
+        });
+    }
 
     return (
     <div className="container">
@@ -572,10 +578,13 @@ const ChatRoom = (props) => {
                     )}
 
                 </div>
+                <div>
+                    <a onClick={logout} style={{cursor: 'pointer'}}>logout</a>
+                </div>
             </div>
             
             {(tab==="SEARCH") && <div className='chat-content'>
-                <UserSearch  groupName={'null'} authUser={props.authUser} fetchUserContacts={fetchUserContacts}/> 
+                <UserSearch  groupName={'null'} authUser={props.authUser} fetchUserContacts={fetchUserContacts}                /> 
             </div>}
             {(tab!=="SEARCH" && mode==="MESSAGE") && 
             <div className='chat-content'>

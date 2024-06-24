@@ -1,4 +1,4 @@
-package com.example.app.registration;
+package com.example.app.authentication;
 
 import lombok.Builder;
 

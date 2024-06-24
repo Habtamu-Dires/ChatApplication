@@ -1,9 +1,13 @@
 package com.example.app.chat_message;
 
 
+import com.example.app.api_response.ApiResponse;
 import com.example.app.chatroom.ChatRoom;
 import com.example.app.chatroom.ChatRoomService;
+import com.example.app.exception.ActionNotAllowedException;
+import com.example.app.exception.InvalidRequestException;
 import com.example.app.exception.ResourceNotFoundException;
+import com.example.app.security_config.SecurityCheck;
 import com.example.app.user.User;
 import com.example.app.user.UserService;
 import com.example.app.chat_dto.ChatNotification;
@@ -13,7 +17,13 @@ import com.example.app.groupchat.GroupChatRoomRepository;
 import com.example.app.kafka_config.KafkaProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -38,8 +48,26 @@ public class ChatMessageService {
 
     //send message
     public void sendMessage(ChatNotification chatNotification){
+        //is the sender the logged one?
+      if(SecurityCheck.isTheUserNotLoggedIn(chatNotification.sender())){
+          //deleteAttachment if exists
+          SecurityCheck.deleteAttachment(chatNotification);
+          throw new ActionNotAllowedException();
+      }
+
+        //check if the attachment is successfully send
+        String filePath = chatNotification.fileUrl();
+        if(filePath != null  && !filePath.isBlank()){
+            if(!Files.exists(Paths.get(filePath))) {
+                throw new InvalidRequestException(
+                        "The required attachment was not sent successfully"
+                );
+            }
+        }
+
         userService.findUserByUsername(chatNotification.sender());
         userService.findUserByUsername(chatNotification.recipient());
+
         kafkaProducer.sendMessage(chatNotification);
     }
     //save chat message
@@ -76,6 +104,11 @@ public class ChatMessageService {
     }
 
     public List<ChatNotification> findChatMessages(String senderUsername, String recipientUsername) {
+
+        //is the sender is the one who is logged in?
+        if(SecurityCheck.isTheUserNotLoggedIn(senderUsername)){
+            throw new ActionNotAllowedException();
+        }
 
         User sender  = userService.findUserByUsername(senderUsername);
         User recipient = userService.findUserByUsername(recipientUsername);

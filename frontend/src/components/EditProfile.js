@@ -6,15 +6,10 @@ function EditProfile(props){
     const[userProfile, setUserProfile] = useState(null);
     const navigate = useNavigate();
 
-    //for basic authentication encode credentials
-    function encodeCredentials(username, password) {
-        return btoa(`${username}:${password}`)
-    }
-
     const fetchUserProfile = () => {
         fetch(`http://localhost:8080/api/v1/users/profile/${props.authUser.username}`,{
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${localStorage.getItem('jwtToken')}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -50,7 +45,7 @@ function EditProfile(props){
             body: JSON.stringify(profileUpdateDto),
             credentials: "same-origin", 
             headers: {
-              "Authorization": `Basic ${props.encodedCredentials}`,
+              "Authorization": `Bearer ${localStorage.getItem('jwtToken')}`,
               "Content-Type": "application/json"
             },
         })
@@ -61,12 +56,11 @@ function EditProfile(props){
                 console.log(apiRes.data.newUsername);
                 
                const username = apiRes.data.newUsername;
-               const password = apiRes.data.password;
+               const jwtToken = apiRes.data.jwtToken;
                console.log("username " + username);
-               console.log("password " + password)
-               props.setAuthUser({username, password});
-               const encodedCredentials = encodeCredentials(username, password);
-               props.setEncodedCredentials(encodedCredentials);
+               localStorage.setItem('username', username);
+               localStorage.setItem('jwtToken', jwtToken);
+               props.setAuthUser({username, jwtToken});
 
                navigate('/');
             } else{

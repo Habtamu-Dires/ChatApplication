@@ -39,7 +39,7 @@ attachment:
 
 frontend.url: http://localhost:3000
 
-secret.key: "HCVTdWUdX1w1Hq48ULtWdQOmARJbkQ6lmcKGMeM+6Mc="
+secret.key: "SECRET-KEY"
 
 logging:
   level:

@@ -12,7 +12,7 @@ function UserProfile(props) {
         const response = await 
             fetch(`http://localhost:8080/api/v1/users/profile/${props.username}`,{
                 headers: {
-                    "Authorization": `Basic ${props.encodedCredentials}`,
+                    "Authorization": `Bearer ${props.authUser.jwtToken}`,
                     "Content-Type": "application/json",
                 },               
                 credentials: "same-origin"
@@ -34,7 +34,7 @@ function UserProfile(props) {
                 contactName: props.username
             }),
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
@@ -65,7 +65,7 @@ function UserProfile(props) {
                 'username': props.username
             }),
             headers: {
-                "Authorization": `Basic ${props.encodedCredentials}`,
+                "Authorization": `Bearer ${props.authUser.jwtToken}`,
                 "Content-Type": "application/json",
             },
             credentials: "same-origin"
