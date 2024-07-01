@@ -16,6 +16,7 @@ Additionally, a simple frontend component developed with ReactJs is included to 
 
     Private Messaging: Users can establish secure one-on-one conversations.
     Group Messaging: Enables communication within designated groups.
+    File Attachment: Enables to send files as an attachment(image, video, pdf...)
     Real-Time Updates: Message notifications are delivered instantly for a seamless chat experience.
     Scalable Architecture: The backend is designed to handle a growing user base without compromising performance.
 
