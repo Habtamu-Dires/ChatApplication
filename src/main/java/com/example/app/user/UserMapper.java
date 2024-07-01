@@ -1,15 +1,22 @@
 package com.example.app.user;
 
+import org.springframework.stereotype.Component;
 
 import com.example.app.user.dtos.ProfileUpdateDTO;
 import com.example.app.user.dtos.UserDTO;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+@Component
+@NoArgsConstructor
 public class UserMapper {
 
     //user to userDTO
-    public static UserDTO userToDTO(User user){
+    public  UserDTO userToDTO(User user){
+        if(user == null){
+            throw new NullPointerException("The User Should Not Be Null");
+        }
         return UserDTO.builder()
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -18,14 +25,14 @@ public class UserMapper {
                 .build();
     }
 
-    public static List<UserDTO> userDTOS (List<User> users){
+    public  List<UserDTO> userDTOS (List<User> users){
         return users.stream()
-                .map(UserMapper::userToDTO)
+                .map(this::userToDTO)
                 .toList();
     }
 
     //DTO to user
-    public static User DtoToUser(UserDTO userDTO){
+    public  User DtoToUser(UserDTO userDTO){
        return User.builder()
                 .firstName(userDTO.firstName())
                 .lastName(userDTO.lastName())
@@ -34,13 +41,13 @@ public class UserMapper {
                 .build();
     }
 
-    public static ProfileUpdateDTO userToProfileUpdateDTO(User user) {
+    public  ProfileUpdateDTO userToProfileUpdateDTO(User user,String token) {
         return ProfileUpdateDTO.builder()
                 .newUsername(user.getUsername())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phoneNumber(user.getPhoneNumber())
-                .password(user.getPassword()) // to be removed
+                .jwtToken(token)
                 .build();
     }
 }

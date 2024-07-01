@@ -11,8 +11,6 @@ function Home () {
     // function encodeCredentials(username, password) {
     //     return btoa(`${username}:${password}`)
     // }
-    console.log("The localstorage item")
-    console.log( localStorage.getItem("username"));
 
     useEffect(()=>{
         if(localStorage.getItem("username") !== null 

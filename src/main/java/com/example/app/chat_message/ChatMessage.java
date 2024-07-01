@@ -48,7 +48,7 @@ public class ChatMessage {
     @JoinColumn(name = "group_id")
     private GroupChatRoom groupId;
 
-    @OneToMany(mappedBy = "chatMessage")
+    @OneToMany(mappedBy = "chatMessage", fetch = FetchType.EAGER)
     private List<ChatReaction> chatReactionList;
 }
 

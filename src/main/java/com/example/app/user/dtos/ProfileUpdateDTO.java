@@ -10,5 +10,6 @@ public record ProfileUpdateDTO(
         String password,
         String firstName,
         String lastName,
-        String phoneNumber) {}
+        String phoneNumber,
+        String jwtToken) {}
 

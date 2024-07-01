@@ -6,6 +6,7 @@ import com.example.app.user.dtos.ProfileUpdateDTO;
 import com.example.app.user.dtos.UserAndContactDto;
 import com.example.app.user.dtos.UserDTO;
 import lombok.RequiredArgsConstructor;
+import org.apache.tomcat.util.http.parser.Authorization;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,9 +41,9 @@ public class UserController {
     //update profile
     @PutMapping("/profile-update")
     public ResponseEntity<ApiResponse<ProfileUpdateDTO>> updateProfile(
+            @RequestHeader String Authorization,
             @RequestBody ProfileUpdateDTO dto){
-        System.out.println(dto);
-        ProfileUpdateDTO userDTO = userService.updateUser(dto);
+        ProfileUpdateDTO userDTO = userService.updateUser(dto,Authorization);
         return ResponseEntity.ok(new ApiResponse<>(
                 true,userDTO,"user profile-updated"));
     }

@@ -134,8 +134,8 @@ public class GroupChatRoomService {
             SecurityCheck.deleteAttachment(chatNotification);
             throw new ActionNotAllowedException();
         }
-
         kafkaProducer.sendMessage(chatNotification);
+
     }
 
     public GroupChatRoom findGroupChatRoomById(Long id){
@@ -198,6 +198,7 @@ public class GroupChatRoomService {
                                     .id(chatMessage.getId())
                                     .sender(chatMessage.getSender().getUsername())
                                     .groupName(chatMessage.getGroupId().getGroupName())
+                                    .groupOwner(groupChatRoom.getOwner().getUsername())
                                     .text(chatMessage.getText())
                                     .fileName(chatMessage.getFileName())
                                     .fileUrl(chatMessage.getFileUrl())

@@ -55,8 +55,6 @@ function UserProfile(props) {
 
     //add user to a group
     const addToGroup = () => {
-        console.log("The grup name is " + props.groupName);
-        console.log("The username is " + props.username);
         fetch('http://localhost:8080/api/v1/group-chat/add-to-group',{
             method: "POST",
             body: JSON.stringify({
@@ -92,11 +90,11 @@ function UserProfile(props) {
             <div>
                 {(props.username !== props.authUser.username) &&
                 (props.groupName === 'null') &&
-                <button type="button" onClick={addToContact}>Add</button>}
+                <a onClick={addToContact} style={{cursor:"pointer"}}>Add</a>}
                 {(props.username !== props.authUser.username) && 
                 (props.groupName !== 'null') &&<div>
                 <p>Add  user {props.username} to group {props.groupName}</p>
-                <button type="button" onClick={addToGroup}>Add</button>
+                <a onClick={addToGroup} style={{cursor:"pointer"}}>Add</a>
                 </div>
                 }
             </div>

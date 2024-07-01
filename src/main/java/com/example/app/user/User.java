@@ -12,7 +12,6 @@ import lombok.*;
 
 import java.util.List;
 
-
 @Setter
 @Getter
 @AllArgsConstructor
@@ -28,8 +27,10 @@ public class User {
             sequenceName = "user_sequence",
             allocationSize = 1
     )
-    @GeneratedValue(strategy = GenerationType.SEQUENCE,
-    generator = "user_sequence")
+    @GeneratedValue(
+        strategy = GenerationType.SEQUENCE,
+        generator = "user_sequence"
+    )
     private Long id;
     @NotBlank
     @Column(unique = true)
@@ -58,5 +59,5 @@ public class User {
 
     @OneToMany(mappedBy = "user")
     private List<ChatReaction> chatReactionList;
-    
+
 }

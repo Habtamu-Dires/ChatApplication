@@ -52,9 +52,6 @@ function EditProfile(props){
         .then(response => response.json())
         .then(apiRes => {
             if(apiRes.success){
-                console.log(apiRes);
-                console.log(apiRes.data.newUsername);
-                
                const username = apiRes.data.newUsername;
                const jwtToken = apiRes.data.jwtToken;
                console.log("username " + username);

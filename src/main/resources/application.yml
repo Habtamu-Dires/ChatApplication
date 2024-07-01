@@ -7,12 +7,16 @@ spring:
       max-request-size: 11MB
 
   datasource:
-    url: jdbc:postgresql://localhost/spring_whatsapp
-    username: habt
+    url: jdbc:postgresql://localhost/chat_application
+    username: postgres
     password: password
   jpa:
     hibernate:
       ddl-auto: create-drop
+      dialect:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
     listener:
       ack-mode: manual

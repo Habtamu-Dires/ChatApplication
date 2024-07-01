@@ -13,6 +13,7 @@ const ChatRoom = (props) => {
     const[file,setFile] = useState(null);
     const fileInputRef = useRef(null);
     const [showGroupPopUp, setShowGroupPopUp] = useState(false);
+    const [groupOwner, setGroupOwner] = useState(null);
     const [groupName, setGroupName] = useState(null);
     const [groups, setGroups] = useState(new Map());
     const EMOJI = {"THUMBUP": '👍', "LOVE":'❤️', "CRYING":'😢', "SURPRISED":'😯'}
@@ -78,7 +79,16 @@ const ChatRoom = (props) => {
             },
             credentials: "same-origin"
         })
-        .then(response => response.json())
+        .then(response => {
+            if(response.ok){
+               return response.json()
+            } else if(response.status === 403){ // unauthorized
+                localStorage.removeItem('username');
+                localStorage.removeItem('jwtToken');
+                props.setAuthUser(null);
+            
+            }
+        })
         .then(apiRes => {
             console.log(apiRes);
             if(apiRes.success){
@@ -162,6 +172,7 @@ const ChatRoom = (props) => {
     //onGroupMessage
     const onGroupMessage = (payload) => {
         let payloadData = JSON.parse(payload.body);
+        console.log("The recipient: " + payloadData.recipient);
            
         if(payloadData.recipient && payloadData.recipient === 'DELETE') {
             if(groups.get(payloadData.groupName)){
@@ -170,7 +181,7 @@ const ChatRoom = (props) => {
             }
             //fetchUserGroups();
             setTab("SEARCH");
-        }
+        } 
         else if(groups.get(payloadData.groupName)){
             // groups.get(payloadData.groupName).push(payloadData);
             // setGroups(new Map(groups));
@@ -352,6 +363,7 @@ const ChatRoom = (props) => {
             }
             if(apiRes.data.length !== 0){
                 apiRes.data.forEach(chatNotif => {
+                    chatNotif.showReactionOPtions = false;
                     privateChats.get(username)
                         .push(chatNotif);
                     setPrivateChats(new Map(privateChats));
@@ -372,7 +384,6 @@ const ChatRoom = (props) => {
         .then(response => response.json())
         .then(apiRes => {
             if(apiRes.success){
-                console.log(apiRes.data)
 
                 if(!groups.get(groupName)){
                     groups.set(groupName, []);
@@ -382,13 +393,16 @@ const ChatRoom = (props) => {
                     groups.set(groupName, []);
                     setGroups(new Map(groups));
                 }
-
+                let groupOwner;
                 if(apiRes.data.length !== 0) {
                     apiRes.data.forEach(chatNotif => {
+                        groupOwner = chatNotif.groupOwner;
+                        chatNotif.showReactionOPtions = false;
                         groups.get(groupName)
                             .push(chatNotif);
                         setGroups(new Map(groups)); 
                     });
+                    setGroupOwner(groupOwner);
                 }
             } else{
                 console.log("you got error ? ")
@@ -535,7 +549,47 @@ const ChatRoom = (props) => {
             localStorage.removeItem("username");
         });
     }
+    // showReactions
+    const showChatRectionForPrivatteMesg = (index, show) => {
+        
+        const chatArray = privateChats.get(tab);
+        const obj = chatArray[index];
+        obj.showReactionOPtions = show;
+        console.log(obj);
+        chatArray[index] = obj;
+    
+        privateChats.set(tab, chatArray);
+        setPrivateChats(new Map(privateChats));
 
+      };
+      const showChatRectionForGroupMesg = (index, show) => {
+        
+        const chatArray = groups.get(tab);
+        const obj = chatArray[index];
+        obj.showReactionOPtions = show;
+        console.log(obj);
+        chatArray[index] = obj;
+    
+        groups.set(tab, chatArray);
+        setGroups(new Map(groups));
+
+      };
+    
+      const showReactionOptions = (index, type) => {
+        if(type === 'private'){
+            showChatRectionForPrivatteMesg(index, true);
+        } else if(type === 'group'){
+            showChatRectionForGroupMesg(index, true)
+        }
+      };
+    
+      const hideChatReactionOptions = (index, type) => {
+        if(type === 'private'){
+            showChatRectionForPrivatteMesg(index, false);
+        } else if(type === 'group'){
+            showChatRectionForGroupMesg(index, false)
+        }
+      };
     return (
     <div className="container">
         {userData.connected?
@@ -568,12 +622,14 @@ const ChatRoom = (props) => {
                     <a onClick={()=>setShowGroupPopUp(true)} style={{cursor:'pointer'}}>Create Group</a>
                     {showGroupPopUp && (
                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'white', padding: '20px' }}>
-                        <h3>Enter a Group Name</h3>
-                        <form onSubmit={createGroup}>
+                        <h3>Enter a Group Name 
+                        <a style={{color:'red' ,cursor:'pointer'}} onClick={() => setShowGroupPopUp(false)}> X</a>
+                        </h3>
+                        <form>
                           <input type="text" value={groupName} onChange={handleGroupNameChange} />
-                          <button type="submit">Submit</button>
+                          <a style={{cursor:'pointer'}} onClick={createGroup} >Create</a>
                         </form>
-                        <button onClick={() => setShowGroupPopUp(false)}>Close</button>
+                        
                       </div>
                     )}
 
@@ -606,7 +662,8 @@ const ChatRoom = (props) => {
                             {chat.sender === userData.username && <div className="avatar self">{chat.sender}</div>}
                             
                         </li>
-                        <div className={`message  ${chat.sender === userData.username && "self"}`}>
+                        <div onMouseEnter={()=>{showReactionOptions(index, 'private')}} 
+                             className={`message  ${chat.sender === userData.username && "self"}`}>
                             {Object.keys(chat.reactions).length !== 0 && (
                                     <div>
                                     {Object.keys(chat.reactions).map(key => (
@@ -615,7 +672,9 @@ const ChatRoom = (props) => {
                                     </div>)
                             } 
                         </div>
-                        <div className={`message  ${chat.sender === userData.username && "self"}`}>    
+                        {chat.showReactionOPtions && 
+                        <div onMouseLeave={() =>{hideChatReactionOptions(index, 'private')}}
+                                 className={`message  ${chat.sender === userData.username && "self"}`}>    
                             <span onClick={()=> handleReactionClick(chat.id,'LOVE')} style={{cursor: 'pointer'}}>
                                     ❤️ </span>
                             <span onClick={()=> handleReactionClick(chat.id,'THUMBUP')} style={{cursor: 'pointer'}}>
@@ -624,7 +683,7 @@ const ChatRoom = (props) => {
                                 😢 </span>
                             <span onClick={()=> handleReactionClick(chat.id,'SURPRISED')} style={{cursor: 'pointer'}}>
                                 😯 </span>
-                        </div>
+                        </div>}
                         </>
                     ))}
                 </ul>
@@ -634,6 +693,7 @@ const ChatRoom = (props) => {
                         <input
                             type="text"
                             value={userData.message}
+                            style={{width: '320px'}}
                             onChange={handleTextChange}
                             placeholder="Type a message"
                         />
@@ -663,18 +723,28 @@ const ChatRoom = (props) => {
             {(tab!=="SEARCH" && mode==="GROUP")&& <div className='chat-content'>
                 <div>            
                     <span>
-                        <button onClick={addUserToGroup} style={{marginRight:'10px'}}>
-                            Add Users
-                        </button>
-                        <button onClick={deleteGroup} style={{float:'right'}}>
+                        <a onClick={addUserToGroup} style={{cursor:'pointer', marginRight:'10px'}}>
+                            Add User
+                        </a>
+                        {groups.get(tab).length == 0  && (
+                            <a onClick={deleteGroup} style={{cursor:'pointer',float:'right'}}>
                             Delete
-                        </button>
+                            </a>    
+                        )}
+                        {groups.get(tab).length !== 0 && groupOwner === userData.username && (
+                             <a onClick={deleteGroup} style={{cursor:'pointer',float:'right'}}>
+                             Delete
+                             </a> 
+                        )}
+                        
                     </span>
                 </div>
                 <ul className="chat-messages">
                     {[...groups.get(tab)].map((chat,index)=>(<>
-                        <li className={`message ${chat.sender === userData.username && "self"}`} key={index}>
+                        {chat.type ==='group' && <>
+                            <li className={`message ${chat.sender === userData.username && "self"}`} key={index}>
                             {chat.sender !== userData.username && <div className="avatar">{chat.sender}</div>}
+                            
                             <div className="message-data">{chat.text}</div>                            
 
                             {chat.fileUrl !== '' && 
@@ -688,7 +758,8 @@ const ChatRoom = (props) => {
                             {chat.sender === userData.username && <div className="avatar self">{chat.sender}</div>}
                         
                         </li>
-                        <div className={`message  ${chat.sender === userData.username && "self"}`}>
+                        <div onMouseEnter={()=>{showReactionOptions(index, 'group')}} 
+                            className={`message  ${chat.sender === userData.username && "self"}`}>
                             {Object.keys(chat.reactions).length !== 0 && (
                                     <div className='self'>
                                     {Object.keys(chat.reactions).map(key => (
@@ -696,8 +767,11 @@ const ChatRoom = (props) => {
                                     ))}
                                     </div>)
                             } 
+
                         </div>
-                        <div className={`message  ${chat.sender === userData.username && "self"}`}>    
+                        {chat.showReactionOPtions && 
+                            <div onMouseLeave={()=>{hideChatReactionOptions(index, 'group')}}
+                                 className={`message  ${chat.sender === userData.username && "self"}`}>    
                             <span onClick={()=> handleReactionClick(chat.id,'LOVE')} style={{cursor: 'pointer'}}>
                                     ❤️ </span>
                             <span onClick={()=> handleReactionClick(chat.id,'THUMBUP')} style={{cursor: 'pointer'}}>
@@ -706,38 +780,45 @@ const ChatRoom = (props) => {
                                 😢 </span>
                             <span onClick={()=> handleReactionClick(chat.id,'SURPRISED')} style={{cursor: 'pointer'}}>
                                 😯 </span>
-                        </div>
+                        </div>}
+                        </>
+                        }
+                        {chat.type === 'USER-ADDED' && 
+                            <div className='usedAddedMsg'>{chat.text}</div>
+                        }
+                        
                         </>
                     ))}
                 </ul>
 
                 <div className="send-message">
                 <div>
-                        <input
-                            type="text"
-                            value={userData.message}
-                            onChange={handleTextChange}
-                            placeholder="Type a message"
-                        />
-                        <button onClick={handleAttachmentClick} 
-                            style={{ cursor: 'pointer' }}>
-                            📎
+                    <input
+                        type="text"
+                        value={userData.message}
+                        style={{width: '320px'}}
+                        onChange={handleTextChange}
+                        placeholder="Type a message"
+                    />
+                    <button onClick={handleAttachmentClick} 
+                        style={{ cursor: 'pointer' }}>
+                        📎
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleFileChange}
+                    />
+                    {file && (
+                        <div>
+                        <strong>Selected file:</strong> {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                        <button onClick={handleFileRemove} style={{ cursor: 'pointer', marginLeft: '10px' }}>
+                            ❌
                         </button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            style={{ display: 'none' }}
-                            onChange={handleFileChange}
-                        />
-                        {file && (
-                            <div>
-                            <strong>Selected file:</strong> {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                            <button onClick={handleFileRemove} style={{ cursor: 'pointer', marginLeft: '10px' }}>
-                                ❌
-                            </button>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
+                </div>
                     <button type="button" className="send-button" onClick={sendGroupMessage}>send</button>
                 </div>
                 

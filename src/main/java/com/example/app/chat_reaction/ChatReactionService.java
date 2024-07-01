@@ -90,7 +90,7 @@ public class ChatReactionService {
                     }
                 } ,() -> { // chat message reaction not found
                     //check if user is allowed to send reaction to the message
-                  ChatMessage chatMessage =  chatMessageService
+                  ChatMessage chatMessage = chatMessageService
                           .findChatMessageById(dto.getChatMessageId());
                   if(chatMessage.getGroupId() == null) { //private chat
                       if(!chatMessage.getSender().getUsername().equals(dto.getUsername())

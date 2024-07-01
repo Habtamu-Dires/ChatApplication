@@ -12,6 +12,7 @@ public record ChatNotification(
         String sender,
         String recipient,
         String groupName,
+        String groupOwner,
         String text,
         String fileName,
         String fileUrl,

@@ -63,6 +63,7 @@ const UserSearch = (props) => {
                 type="text"
                 value={query}
                 onChange={handleChange}
+                style={{width:'90%', borderRadius: '20px'}}
                 placeholder="Search for users..."
             />
             <ul>

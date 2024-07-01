@@ -45,10 +45,13 @@ public class KafkaConsumer {
     ) {
         Object obj = record.value();
 //        if(messageType.equals("chatNotification")) {
+        //chatNotification for private and group (also group delete) chat
         if(obj instanceof ChatNotification){
             processPrivateAndGroupMessages((ChatNotification) obj);
             acknowledgment.acknowledge();  // manual acknowledgment
+
         } else if(obj instanceof ChatReactionReqResDTO){
+            //chatReaction process
             processChatReaction((ChatReactionReqResDTO) obj);
             acknowledgment.acknowledge(); // manual acknowledgment
         } else if(obj instanceof CreateGroupDTO) {
@@ -65,15 +68,35 @@ public class KafkaConsumer {
         }
     }
 
-    private void processAddToGroupEvent(AddToGroupDTO obj) {
+    private void processAddToGroupEvent(AddToGroupDTO dto) {
         GroupChatRoom groupChatRoom
-                = groupChatRoomService.findByGroupName(obj.groupName());
-        User userTobeAdded = userService.findUserByUsername(obj.username());
+                = groupChatRoomService.findByGroupName(dto.groupName());
+        User userTobeAdded = userService.findUserByUsername(dto.username());
 
         List<User> userList = groupChatRoom.getUsers();
         userList.add(userTobeAdded);
         groupChatRoom.setUsers(userList);
         groupChatRoomService.saveGroup(groupChatRoom);
+        //create chat notification
+        String textMsg = String.format("%s add %s to the group",
+                    dto.addedBy(), dto.username());
+        ChatNotification chatNotification =
+                ChatNotification.builder()
+                    .sender(dto.addedBy())
+                    .groupName(groupChatRoom.getGroupName())
+                    .type("USER-ADDED")
+                    .text(textMsg)
+                    .build();
+        //save message
+            groupChatRoomService.saveMessage(chatNotification,groupChatRoom);
+        //send notification to group members
+        userList.forEach(user -> {
+            messagingTemplate.convertAndSendToUser(
+                user.getUsername(),
+                "/my-groups",
+                chatNotification
+            );
+        });
     }
 
     private void processCreateGroupEvent(CreateGroupDTO obj) {
@@ -93,7 +116,7 @@ public class KafkaConsumer {
         chatReactionService
                 .findByChatMessageAndUser(dto.getChatMessageId(), dto.getUsername())
                 .ifPresentOrElse((chatReaction) ->{
-                    if(chatReaction.getEmoji().name().equals(dto.getEmoji())) {
+                    if(chatReaction.getEmoji().toString().equals(dto.getEmoji())) {
                         chatReactionService.delete(chatReaction);
                     } else {
                         chatReaction.setEmoji(EMOJI.valueOf(dto.getEmoji()));
@@ -117,37 +140,39 @@ public class KafkaConsumer {
                 });
 
         //send notification.
-        //identify if it is group message or not
+        //identify if it is private or group message
        ChatMessage chatMessage =
                chatMessageService.findChatMessageById(dto.getChatMessageId());
 
-        //private message so, send notification to both sender and receiver
-       if(chatMessage.getGroupId() == null) {
-           String sendToUsername = "";
-        if(chatMessage.getSender().getUsername().equals(dto.getUsername())){
-            sendToUsername = chatMessage.getRecipient().getUsername();
-        } else if(chatMessage.getRecipient().getUsername().equals(dto.getUsername())){
-            sendToUsername = chatMessage.getSender().getUsername();
-        }
 
-       //send message notification to receiver
-       messagingTemplate.convertAndSendToUser(
-           sendToUsername,
-           "/message-reaction",
-           ChatNotification.builder()
-                   .sender(dto.getUsername())
-                   .recipient(sendToUsername)
-                   .build()
-       );
-       //send message notification to sender
-       messagingTemplate.convertAndSendToUser(
-           dto.getUsername(),
-           "/message-reaction",
-           ChatNotification.builder()
-                   .sender(dto.getUsername())
-                   .recipient(sendToUsername)
-                   .build()
-       );
+       if(chatMessage.getGroupId() == null) {
+            //it is private message so, send notification to both sender and receiver
+            //identify the recipient name of the chat reaction
+            String recipientName = "";
+            if(chatMessage.getSender().getUsername().equals(dto.getUsername())){
+                recipientName = chatMessage.getRecipient().getUsername();
+            } else if(chatMessage.getRecipient().getUsername().equals(dto.getUsername())){
+                recipientName = chatMessage.getSender().getUsername();
+            }
+
+           //send message notification to receiver
+           messagingTemplate.convertAndSendToUser(
+               recipientName,
+               "/message-reaction",
+               ChatNotification.builder()
+                       .sender(dto.getUsername())
+                       .recipient(recipientName)
+                       .build()
+           );
+           //send message notification to the sender
+           messagingTemplate.convertAndSendToUser(
+               dto.getUsername(),
+               "/message-reaction",
+               ChatNotification.builder()
+                       .sender(dto.getUsername())
+                       .recipient(recipientName)
+                       .build()
+           );
 
        } else {
            // it is group message
@@ -172,21 +197,18 @@ public class KafkaConsumer {
     // process private and group chat and send web socket notifications
     public void processPrivateAndGroupMessages(ChatNotification chatNotification){
         if(chatNotification.type().equals("private")){
-            log.info(String.format("Consuming the message from whatsapp-topic: %s",
-                    chatNotification.text())
-            );
             //save message
             ChatMessage savedMsg = chatMessageService.save(chatNotification);
 
-            // add reactions for the message
+//            // add reactions for the message
             Map<String, EMOJI> rMap = new HashMap<>();
-            if(savedMsg.getChatReactionList() != null){
-                savedMsg.getChatReactionList()
-                .forEach(reaction ->
-                        rMap.put(reaction.getUser().getUsername(),
-                                reaction.getEmoji())
-                );
-            }
+//            if(savedMsg.getChatReactionList() != null){
+//                savedMsg.getChatReactionList()
+//                .forEach(reaction ->
+//                        rMap.put(reaction.getUser().getUsername(),
+//                                reaction.getEmoji())
+//                );
+//            }
 
             //send message notification to receiver
             messagingTemplate.convertAndSendToUser(
@@ -222,15 +244,23 @@ public class KafkaConsumer {
             GroupChatRoom groupChatRoom =
                     groupChatRoomService.findByGroupName(chatNotification.groupName());
 
-            // it is a delete a group request
             if(chatNotification.recipient() != null && chatNotification.recipient().equals("DELETE")){
+                // it is a delete a group request
                 List<ChatMessage> chatMessageLists = chatMessageService
                         .findChatMessagesByGroupName(groupChatRoom.getGroupName());
+                //delete message reactions for each message
+                chatMessageLists.forEach(chatMessage -> {
+                    if(chatMessage.getChatReactionList() != null){
+                        chatMessage.getChatReactionList().forEach(chatReactionService::delete);
+                    }
+                });
+                //delete group messages
                 chatMessageLists.forEach(chatMessageService::deleteChatMessage);
+
                 //send notification
                 groupChatRoomService.getGroupMembers(groupChatRoom.getId())
                     .forEach(user -> {
-                        //send message notification to user members
+                        //send message notification to group members
                         messagingTemplate.convertAndSendToUser(
                                 user.getUsername(),
                                 "/my-groups",
@@ -245,6 +275,7 @@ public class KafkaConsumer {
                                         .build()
                             );
                     });
+                // delete group chat room
                 groupChatRoomService.deleteGroup(groupChatRoom);
             } else {    // it is a group message
                 //save message
@@ -253,13 +284,13 @@ public class KafkaConsumer {
 
                 //add message reaction
                 Map<String, EMOJI> rMap = new HashMap<>();
-                if(savedMsg.getChatReactionList() != null){
-                    savedMsg.getChatReactionList()
-                            .forEach(cr ->{
-                                rMap.put(cr.getUser().getUsername(),
-                                        cr.getEmoji());
-                            });
-                }
+//                if(savedMsg.getChatReactionList() != null){
+//                    savedMsg.getChatReactionList()
+//                            .forEach(cr ->{
+//                                rMap.put(cr.getUser().getUsername(),
+//                                        cr.getEmoji());
+//                            });
+//                }
 
                 groupChatRoomService.getGroupMembers(groupChatRoom.getId())
                     .forEach(user -> {

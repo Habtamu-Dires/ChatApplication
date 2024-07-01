@@ -28,7 +28,7 @@ public class AuthenticationService {
     AuthenticationResponse register(RegisterRequest request){
 
 
-        if(userService.isUsernameExists(request.username())){
+        if(userService.doesUsernameExists(request.username())){
             throw new InvalidRequestException(
                     "Username " + request.username() + " is taken"
             );
